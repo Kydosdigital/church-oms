@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUserContext } from "@/lib/data/current-user";
+import { getPlatformAdminContext } from "@/lib/data/platform";
 import { AppShell } from "@/components/layout/app-shell";
 
 // Everything under this route group requires a signed-in session and has no
@@ -12,7 +13,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const ctx = await getCurrentUserContext();
+  const [ctx, platformAdmin] = await Promise.all([
+    getCurrentUserContext(),
+    getPlatformAdminContext(),
+  ]);
 
   // Proxy already guards unauthenticated access (src/lib/supabase/middleware.ts),
   // but a signed-in auth user with no app_users/church row yet (pending admin
@@ -43,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       hasRole("pastor", "attendance_verifier") ||
       ctx.permissions.hasFinanceHistoryPermission(),
     isAdministrator,
+    isPlatformAdmin: Boolean(platformAdmin),
   };
 
   return <AppShell ctx={shellContext}>{children}</AppShell>;
