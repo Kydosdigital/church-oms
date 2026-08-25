@@ -27,10 +27,15 @@ export const appRoleValues = [
   "administrator",
 ] as const;
 
+const optionalBranchId = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  z.string().uuid().optional()
+);
+
 export const userRoleSchema = z.object({
   user_id: z.string().uuid(),
   role: z.enum(appRoleValues),
-  branch_id: z.string().uuid().optional(), // omitted/empty = all branches
+  branch_id: optionalBranchId, // omitted/empty = all branches
   finance_permission: z.boolean().default(false),
   // Only meaningful when finance_permission is true; defaults to full access
   // so a newly-assigned finance role isn't unexpectedly restricted.
@@ -43,6 +48,19 @@ export const inviteUserSchema = z.object({
   full_name: z.string().min(1, "Name is required"),
 });
 export type InviteUserValues = z.infer<typeof inviteUserSchema>;
+
+/**
+ * Administrator invitation flow for an existing church. The user's first
+ * role is created before the invitation is considered complete, so accepting
+ * the invite never drops a staff member into an unconfigured account.
+ */
+export const inviteUserWithRoleSchema = inviteUserSchema.extend({
+  role: z.enum(appRoleValues),
+  branch_id: optionalBranchId,
+  finance_permission: z.boolean().default(false),
+  finance_history_permission: z.boolean().default(true),
+});
+export type InviteUserWithRoleValues = z.infer<typeof inviteUserWithRoleSchema>;
 
 export const provisionChurchSchema = z.object({
   name: z.string().min(1, "Church name is required"),
