@@ -21,6 +21,7 @@ interface AppShellContext {
   canViewProgrammes: boolean;
   canViewReports: boolean;
   isAdministrator: boolean;
+  isPlatformAdmin: boolean;
 }
 
 export function AppShell({
@@ -42,6 +43,7 @@ export function AppShell({
     { href: "/admin/users", label: "Users & roles", show: ctx.isAdministrator },
     { href: "/admin/audit", label: "Audit log", show: ctx.isAdministrator },
     { href: "/admin/settings", label: "Church settings", show: ctx.isAdministrator },
+    { href: "/platform", label: "Platform Owner", show: ctx.isPlatformAdmin },
     { href: "/help", label: "Help", show: true },
   ];
 
