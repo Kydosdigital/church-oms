@@ -18,31 +18,39 @@ export const serviceTypeSchema = z.object({
 });
 export type ServiceTypeValues = z.infer<typeof serviceTypeSchema>;
 
-export const appRoleValues = [
+/** Roles that an ordinary Administrator may manage. */
+export const ordinaryAppRoleValues = [
   "usher",
   "attendance_verifier",
   "treasurer",
   "finance_verifier",
   "pastor",
   "administrator",
-  "super_admin",
 ] as const;
+
+/** Complete church role list. Super Admin is only assignable by Super Admin. */
+export const appRoleValues = [...ordinaryAppRoleValues, "super_admin"] as const;
 
 const optionalBranchId = z.preprocess(
   (value) => (value === "" || value === null ? undefined : value),
   z.string().uuid().optional()
 );
 
+// Keep the legacy admin action limited to ordinary roles. Super Admin flows
+// use managedUserRoleSchema and the guarded user-access server actions.
 export const userRoleSchema = z.object({
   user_id: z.string().uuid(),
-  role: z.enum(appRoleValues),
+  role: z.enum(ordinaryAppRoleValues),
   branch_id: optionalBranchId, // omitted/empty = all branches
   finance_permission: z.boolean().default(false),
-  // Only meaningful when finance_permission is true; defaults to full access
-  // so a newly-assigned finance role isn't unexpectedly restricted.
   finance_history_permission: z.boolean().default(true),
 });
 export type UserRoleValues = z.infer<typeof userRoleSchema>;
+
+export const managedUserRoleSchema = userRoleSchema.extend({
+  role: z.enum(appRoleValues),
+});
+export type ManagedUserRoleValues = z.infer<typeof managedUserRoleSchema>;
 
 export const inviteUserSchema = z.object({
   email: z.string().email("Enter a valid email address"),
