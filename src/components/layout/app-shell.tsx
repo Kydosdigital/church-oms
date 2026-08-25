@@ -18,6 +18,8 @@ interface AppShellContext {
     full_name: string;
   };
   canViewFinance: boolean;
+  canViewProgrammes: boolean;
+  canViewReports: boolean;
   isAdministrator: boolean;
 }
 
@@ -32,9 +34,9 @@ export function AppShell({
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", show: true },
-    { href: "/programmes", label: "Programmes", show: true },
+    { href: "/programmes", label: "Programmes", show: ctx.canViewProgrammes },
     { href: "/revenue", label: "Revenue", show: ctx.canViewFinance },
-    { href: "/reports", label: "Reports", show: true },
+    { href: "/reports", label: "Reports", show: ctx.canViewReports },
     { href: "/admin/categories", label: "Offering categories", show: ctx.isAdministrator },
     { href: "/admin/branches", label: "Branches & venues", show: ctx.isAdministrator },
     { href: "/admin/users", label: "Users & roles", show: ctx.isAdministrator },
