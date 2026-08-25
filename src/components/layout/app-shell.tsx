@@ -20,6 +20,7 @@ interface AppShellContext {
   canViewFinance: boolean;
   canViewProgrammes: boolean;
   canViewReports: boolean;
+  canUseLiveCounter: boolean;
   isAdministrator: boolean;
   isPlatformAdmin: boolean;
 }
@@ -36,6 +37,7 @@ export function AppShell({
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", show: true },
     { href: "/programmes", label: "Programmes", show: ctx.canViewProgrammes },
+    { href: "/counter", label: "Live counter", show: ctx.canUseLiveCounter },
     { href: "/revenue", label: "Revenue", show: ctx.canViewFinance },
     { href: "/reports", label: "Reports", show: ctx.canViewReports },
     { href: "/admin/categories", label: "Offering categories", show: ctx.isAdministrator },
