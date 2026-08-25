@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
@@ -40,8 +41,16 @@ export function AppShell({
     <div className="flex-1 flex flex-col sm:flex-row min-h-0">
       <aside className="sm:w-60 shrink-0 border-b sm:border-b-0 sm:border-r border-surface-border bg-surface">
         <div className="p-4 flex items-center justify-between sm:block">
-          <Link href="/dashboard" className="font-semibold text-brand">
-            {process.env.NEXT_PUBLIC_APP_NAME ?? "Church Operations"}
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-brand">
+            <Image
+              src="/brand/church-oms-icon-primary-transparent.png"
+              alt=""
+              width={28}
+              height={28}
+              className="h-7 w-7 shrink-0 object-contain"
+              priority
+            />
+            <span>{process.env.NEXT_PUBLIC_APP_NAME ?? "Church Operations"}</span>
           </Link>
         </div>
         <nav aria-label="Main navigation" className="flex sm:flex-col overflow-x-auto sm:overflow-visible px-2 sm:px-0 pb-2 sm:pb-0">
