@@ -20,6 +20,22 @@ cp .env.example .env.local   # fill in your Supabase project URL + anon key
 npm run dev
 ```
 
+## Project docs and Claude Code governance
+
+- `docs/PRODUCT.md` — what this app is, who it's for, the submit → verify →
+  lock workflow, and the explicit finance-visibility model.
+- `docs/ARCHITECTURE.md` — stack, routing/session handling, the RLS-as-
+  authorization-boundary pattern, and the full migration history.
+- `.claude/` — Claude Code project governance: `CLAUDE.md` entry point,
+  `.mcp.json` (Supabase MCP server for this project), `rules/` (frontend,
+  database, security conventions), `agents/` (`code-reviewer`,
+  `security-reviewer` subagents), `hooks/` (env-file/secret protection, a
+  pre-commit verification reminder), and `skills/` (`build-feature`,
+  `review-feature`).
+- `tests/` — Vitest specs, colocated at the top level rather than beside
+  their source files, importing via the `@/` alias (see
+  `vitest.config.mts`). Run with `npm test`.
+
 ## Database
 
 All schema, RLS policies and workflow RPCs live in `supabase/migrations/`, applied
