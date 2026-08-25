@@ -12,15 +12,11 @@ export interface OnboardingActionState {
 /**
  * First-run onboarding: a signed-in auth user with no church yet (app_users
  * row exists via the handle_new_auth_user trigger, but church_id is null)
- * provisions their own church and becomes its first administrator.
+ * provisions their own church and becomes its first Super Admin.
  *
- * provision_new_church() has EXECUTE revoked from anon/authenticated
- * (supabase/migrations/0005-0006) — it's a platform/onboarding operation,
- * not something any signed-in user should be able to call for an arbitrary
- * church. This action calls it via the service-role client instead, only
- * after confirming (with the RLS-bound client) that the caller is signed in
- * and genuinely has no church yet — so it can't be used to re-provision or
- * hijack an existing tenant.
+ * Public church registration is intentionally still available during the
+ * current testing phase. Stronger organisation-verification checks can be
+ * added later without changing the staff invitation model.
  */
 export async function provisionChurch(
   _prevState: OnboardingActionState,
@@ -34,7 +30,6 @@ export async function provisionChurch(
 
   const { data: profile } = await supabase.from("app_users").select("church_id").eq("id", user.id).single();
   if (profile?.church_id) {
-    // Already provisioned (e.g. re-submitted this form) — nothing to do.
     redirect("/dashboard");
   }
 
@@ -66,18 +61,30 @@ export async function provisionChurch(
     return { error: userError.message };
   }
 
-  // The first administrator gets full finance visibility by default —
-  // there's no one else to grant it to them yet, and they can adjust their
-  // own or anyone else's from Users & roles afterwards.
-  const { error: roleError } = await admin.from("user_roles").insert({
+  // Super Admin is the highest authority inside this church. It is always
+  // church-wide and carries full finance visibility. We also keep the normal
+  // Administrator companion role so existing admin server checks continue to
+  // work while Super Admin remains a strict superset.
+  const { error: adminRoleError } = await admin.from("user_roles").insert({
     user_id: user.id,
     role: "administrator",
+    branch_id: null,
+    finance_permission: false,
+    finance_history_permission: false,
+  });
+  if (adminRoleError) {
+    return { error: adminRoleError.message };
+  }
+
+  const { error: superAdminRoleError } = await admin.from("user_roles").insert({
+    user_id: user.id,
+    role: "super_admin",
     branch_id: null,
     finance_permission: true,
     finance_history_permission: true,
   });
-  if (roleError) {
-    return { error: roleError.message };
+  if (superAdminRoleError) {
+    return { error: superAdminRoleError.message };
   }
 
   redirect("/dashboard");
