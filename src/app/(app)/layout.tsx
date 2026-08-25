@@ -1,6 +1,15 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { AppShell } from "@/components/layout/app-shell";
+
+// Everything under this route group requires a signed-in session and has no
+// search-relevant content of its own (dashboards, data-entry forms, admin
+// screens) — keep it out of search results even though robots.ts already
+// disallows crawling it.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getCurrentUserContext();

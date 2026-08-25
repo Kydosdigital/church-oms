@@ -1,6 +1,12 @@
 import Link from "next/link";
 
-export const metadata = { title: "Privacy policy" };
+export const metadata = {
+  title: "Privacy policy",
+  description:
+    "What Church Operations Management System stores — account details, attendance counts, " +
+    "giving/offering amounts and an audit trail — and how that information is used.",
+  alternates: { canonical: "/privacy" },
+};
 
 export default function PrivacyPage() {
   return (

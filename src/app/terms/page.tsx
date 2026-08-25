@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-export const metadata = { title: "Terms of use" };
+export const metadata = {
+  title: "Terms of use",
+  description: "The terms governing use of Church Operations Management System.",
+  alternates: { canonical: "/terms" },
+};
 
 export default function TermsPage() {
   return (

@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Minor technical-SEO/security hygiene: don't advertise the framework via
+  // the X-Powered-By response header.
+  poweredByHeader: false,
 };
 
 // Error monitoring (Sentry) — entirely opt-in via env vars the user sets in
