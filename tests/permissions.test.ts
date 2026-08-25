@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PermissionContext } from "./permissions";
+import { PermissionContext } from "@/lib/permissions";
 import type { UserRoleAssignment } from "@/types/domain";
 
 function role(overrides: Partial<UserRoleAssignment> = {}): UserRoleAssignment {

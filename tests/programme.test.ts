@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { programmeEntrySchema } from "./programme";
+import { programmeEntrySchema } from "@/lib/validations/programme";
 
 const base = {
   branch_id: "11111111-1111-4111-8111-111111111111",

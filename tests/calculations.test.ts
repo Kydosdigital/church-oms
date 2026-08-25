@@ -8,7 +8,7 @@ import {
   categoryTotal,
   projectProgressPercent,
   formatPercent,
-} from "./calculations";
+} from "@/lib/calculations";
 
 describe("totalAttendance", () => {
   it("sums men, women, teenagers and children (ATT-02)", () => {
