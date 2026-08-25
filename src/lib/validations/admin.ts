@@ -25,6 +25,7 @@ export const appRoleValues = [
   "finance_verifier",
   "pastor",
   "administrator",
+  "super_admin",
 ] as const;
 
 const optionalBranchId = z.preprocess(
