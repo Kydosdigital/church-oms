@@ -105,3 +105,56 @@ type; and a possible move from the current men/women/teenagers/children
 attendance buckets to a fuller adult/teen/child × male/female breakdown, if
 that level of detail turns out to be wanted (raised in passing during
 requirements discussion but not in the PRD this app was built from).
+
+## Sign-off round (25 Aug) — everything from the punch list except branding/env
+
+Closing the gap between "working MVP" and "ready for the client":
+
+- **Church onboarding** — a first-run `/onboarding` screen provisions a real
+  church (via `provision_new_church`), sets the signed-in user's `church_id`,
+  and makes them the first administrator. `(app)/layout.tsx` redirects any
+  signed-in user with no church here instead of rendering a broken shell.
+  Runs over the service-role client after an RLS-bound check, since
+  `provision_new_church` intentionally has no `authenticated` EXECUTE grant.
+- **Password reset** — `/forgot-password` requests a reset email
+  (`supabase.auth.resetPasswordForEmail`); `/auth/confirm` exchanges the
+  email link's token for a session; `/reset-password` sets the new password.
+- **SRV-08 duplicate-service warning** — the programme wizard now actually
+  checks for an existing occurrence on the same branch/service type/date,
+  shows a warning with a required override + reason instead of a raw
+  constraint error, and records `duplicate_override`/`duplicate_override_reason`
+  on submit (previously a misleading comment claimed this existed; it didn't).
+- **Church settings screen** (`/admin/settings`) — currency, timezone,
+  reporting-year start month, and independent-verification toggle, backed by
+  the `churches_update` RLS policy that already existed.
+- **Audit log viewer** (`/admin/audit`) — filterable by table/action/date
+  over the previously-invisible `audit_events` table.
+- **Excel export** — every CSV report route also accepts `?format=xlsx`
+  (`src/lib/xlsx.ts`, via `exceljs`), alongside the existing CSV and
+  browser-print options.
+- **Error monitoring scaffolding** — `@sentry/nextjs`, wired through
+  `src/instrumentation.ts` / `src/instrumentation-client.ts` /
+  `sentry.server.config.ts` / `sentry.edge.config.ts` plus a `global-error.tsx`
+  boundary. Entirely opt-in: with no `NEXT_PUBLIC_SENTRY_DSN` set, every init
+  call is skipped and the app behaves exactly as before.
+- **Per-role help guides** (`/help`) and **privacy/terms pages** (`/privacy`,
+  `/terms`), linked from the app nav, login and landing pages.
+- **Automated tests** — Vitest covers `calculations.ts`, `permissions.ts`
+  (including the branch-scoping and finance-history-permission logic), and
+  the programme entry validation schema. Run with `npm test`.
+- **Accessibility pass** — a skip-to-content link, `aria-current="page"` on
+  the active nav item, and a focusable main-content landmark on every layout.
+- **Closed a self-service privilege gap**: `authenticated` previously had
+  unrestricted column-level UPDATE on `app_users`, so the row-level
+  `app_users_update_self` policy didn't actually stop a user from changing
+  their own `church_id` or `active` flag. Migration `0011` restricts
+  `authenticated`'s UPDATE grant to `full_name` only; anything else
+  (`active`, `church_id`) now goes through the service-role client after an
+  explicit administrator/onboarding check (see `setUserActive`,
+  the onboarding action).
+
+Deliberately left out of this round (owned elsewhere): real branding assets
+(favicon/app icon/social image — incoming from another source directly into
+the repo) and Vercel project environment variables (the user's own
+responsibility). A custom domain is also unaddressed — that's a Vercel
+dashboard/DNS action, not a code change.

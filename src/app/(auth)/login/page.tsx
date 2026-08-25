@@ -24,7 +24,14 @@ export default function LoginPage() {
       </div>
 
       <div>
-        <Label htmlFor="password">Password</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password" className="mb-0">
+            Password
+          </Label>
+          <Link href="/forgot-password" className="text-sm text-brand underline">
+            Forgot password?
+          </Link>
+        </div>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
 

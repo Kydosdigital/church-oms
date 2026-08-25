@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <main className="flex-1 flex flex-col items-center justify-center gap-6 px-6 py-24 text-center">
+    <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col items-center justify-center gap-6 px-6 py-24 text-center outline-none">
       <span className="rounded-full bg-brand-muted px-3 py-1 text-xs font-medium text-brand">
         {process.env.NEXT_PUBLIC_APP_NAME ?? "Church Operations"}
       </span>
@@ -19,6 +19,11 @@ export default function Home() {
           <Button size="lg">Sign in</Button>
         </Link>
       </div>
+      <p className="text-xs text-muted mt-8">
+        <Link href="/privacy" className="underline">Privacy policy</Link>
+        {" · "}
+        <Link href="/terms" className="underline">Terms of use</Link>
+      </p>
     </main>
   );
 }

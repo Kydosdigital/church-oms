@@ -31,11 +31,23 @@ export const notesSchema = z.object({
   notes: z.string().optional(),
 });
 
+/** SRV-08: a client-side check (src/lib/data/programmes.ts#checkDuplicateService)
+ * warns when another occurrence already exists for the same branch/service
+ * type/date. Not hard-blocked — duplicate_override records the acknowledgement
+ * and duplicate_override_reason why (e.g. "second Sunday service", "make-up
+ * midweek service"). The database backstops this with a partial unique index
+ * that only allows a silent (non-overridden) duplicate to not exist. */
+export const duplicateOverrideSchema = z.object({
+  duplicate_override: z.boolean().default(false),
+  duplicate_override_reason: z.string().optional(),
+});
+
 /** Full programme entry form, combining all wizard sections
  * (Service details, Attendance, Outcomes, Notes — section 8.1). */
 export const programmeEntrySchema = serviceDetailsSchema
   .merge(attendanceSchema)
-  .merge(notesSchema);
+  .merge(notesSchema)
+  .merge(duplicateOverrideSchema);
 
 export type ProgrammeEntryValues = z.infer<typeof programmeEntrySchema>;
 export type ServiceDetailsValues = z.infer<typeof serviceDetailsSchema>;

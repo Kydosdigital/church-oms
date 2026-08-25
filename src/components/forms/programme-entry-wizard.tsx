@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,7 +12,7 @@ import {
   outcomesExceedAttendance,
   formatPercent,
 } from "@/lib/calculations";
-import { createDraftProgramme, submitAttendanceAction } from "@/lib/data/programmes";
+import { createDraftProgramme, submitAttendanceAction, checkDuplicateService } from "@/lib/data/programmes";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea, FieldError } from "@/components/ui/input";
 import { NumberField } from "@/components/ui/input";
@@ -76,6 +76,30 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
   // actually selected, so a record can't end up with mismatched branch/venue.
   const venuesForBranch = reference.venues.filter((v) => v.branch_id === values.branch_id);
 
+  // SRV-08: warn (don't block) when another occurrence already exists for
+  // this branch/service type/date combination.
+  const [duplicate, setDuplicate] = useState<{ id: string; programme_name: string } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!values.branch_id || !values.service_type_id || !values.programme_date) {
+      setDuplicate(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      checkDuplicateService(values.branch_id, values.service_type_id, values.programme_date)
+        .then((result) => {
+          if (!cancelled) setDuplicate(result);
+        })
+        .catch(() => {
+          if (!cancelled) setDuplicate(null);
+        });
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [values.branch_id, values.service_type_id, values.programme_date]);
+
   const stepFields: Record<number, (keyof ProgrammeEntryValues)[]> = {
     0: ["branch_id", "service_type_id", "venue_id", "programme_date", "programme_name", "classification"],
     1: ["men_count", "women_count", "teenagers_count", "children_count"],
@@ -86,10 +110,30 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
   async function goNext() {
     const fields = stepFields[step];
     const valid = fields ? await trigger(fields) : true;
-    if (valid) setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    if (!valid) return;
+    if (step === 0 && !duplicateAcknowledged()) return;
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  }
+
+  /** SRV-08: true unless a duplicate is showing and hasn't been acknowledged
+   * with an override + reason yet. Surfaces a clear inline error rather than
+   * letting the user proceed to a raw server-side rejection. */
+  function duplicateAcknowledged(): boolean {
+    if (!duplicate) return true;
+    if (!values.duplicate_override) {
+      setServerError("Confirm the duplicate-service warning above (or change the date/service type) before continuing.");
+      return false;
+    }
+    if (!values.duplicate_override_reason?.trim()) {
+      setServerError("Add a reason for the duplicate service before continuing.");
+      return false;
+    }
+    setServerError(null);
+    return true;
   }
 
   async function onSubmit(data: ProgrammeEntryValues) {
+    if (!duplicateAcknowledged()) return;
     setServerError(null);
     setSubmitting(true);
     try {
@@ -104,6 +148,7 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
   }
 
   async function onSaveDraft(data: ProgrammeEntryValues) {
+    if (!duplicateAcknowledged()) return;
     setServerError(null);
     setSubmitting(true);
     try {
@@ -207,6 +252,30 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
             <Input id="programme_name" placeholder="e.g. Sunday Service — 1st Service" {...register("programme_name")} />
             <FieldError>{errors.programme_name?.message}</FieldError>
           </div>
+
+          {duplicate && (
+            <div className="rounded-brand border border-warning bg-warning/10 p-3">
+              <p className="text-sm font-medium text-warning">
+                ⚠ A service already exists for this branch, service type and date (&ldquo;
+                {duplicate.programme_name}&rdquo;). If this is intentional (e.g. a second service or
+                a make-up service), confirm below and add a reason.
+              </p>
+              <label className="flex items-center gap-2 mt-2 text-sm">
+                <input type="checkbox" {...register("duplicate_override")} />
+                This is intentional, not a mistake
+              </label>
+              {values.duplicate_override && (
+                <>
+                  <Textarea
+                    className="mt-2"
+                    placeholder="Reason (e.g. second Sunday service, make-up midweek service)…"
+                    {...register("duplicate_override_reason")}
+                  />
+                  <FieldError>{errors.duplicate_override_reason?.message}</FieldError>
+                </>
+              )}
+            </div>
+          )}
           <div>
             <Label>Classification</Label>
             <div className="flex gap-4">
@@ -377,6 +446,10 @@ function ReviewSummary({
     ["New births / Weddings", `${values.new_births_count} / ${values.weddings_count}`],
     ["Notes", values.notes || "—"],
   ];
+
+  if (values.duplicate_override) {
+    rows.push(["Duplicate service reason", values.duplicate_override_reason || "—"]);
+  }
 
   return (
     <div>

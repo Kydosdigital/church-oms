@@ -12,5 +12,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/login?awaiting_setup=1");
   }
 
+  // A freshly signed-up user has an app_users row (via the on_auth_user_created
+  // trigger) but no church yet — send them to set one up before anything else
+  // in the app (which assumes a church_id everywhere) can render sensibly.
+  if (!ctx.user.church_id) {
+    redirect("/onboarding");
+  }
+
   return <AppShell ctx={ctx}>{children}</AppShell>;
 }

@@ -1,5 +1,7 @@
+import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { toCsv } from "@/lib/csv";
+import { toXlsx } from "@/lib/xlsx";
 
 interface FinanceExportRow {
   physical_amount: number;
@@ -18,7 +20,8 @@ interface FinanceExportRow {
 /** Finance export — REV-08 / 12.3: only a finance-authorized user can generate
  * this. Enforced by RLS (revenue_select policy requires has_finance_permission()),
  * not by any check in this route — an unpermitted user simply gets zero rows. */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const format = request.nextUrl.searchParams.get("format");
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -41,12 +44,23 @@ export async function GET() {
     notes: r.notes,
   }));
 
-  const csv = toCsv(rows, [
+  const columns = [
     "date", "branch", "programme", "category", "category_type",
     "physical_amount", "online_amount", "category_total", "state", "notes",
-  ]);
-
+  ] as const;
   const generatedAt = new Date().toISOString();
+
+  if (format === "xlsx") {
+    const buffer = new Uint8Array(await toXlsx(rows, [...columns], "Finance"));
+    return new Response(buffer, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="finance-export-${generatedAt.slice(0, 10)}.xlsx"`,
+      },
+    });
+  }
+
+  const csv = toCsv(rows, [...columns]);
 
   return new Response(`# Generated ${generatedAt}\n${csv}\n`, {
     headers: {

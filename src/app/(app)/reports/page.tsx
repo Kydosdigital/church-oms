@@ -21,22 +21,32 @@ export default async function ReportsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Attendance dataset</CardTitle>
-          <CardDescription>Filtered programme-level attendance and calculated totals (CSV).</CardDescription>
+          <CardDescription>Programme-level attendance and calculated totals.</CardDescription>
         </CardHeader>
-        <a href="/reports/attendance">
-          <Button variant="outline">Download CSV</Button>
-        </a>
+        <div className="flex gap-2">
+          <a href="/reports/attendance">
+            <Button variant="outline">Download CSV</Button>
+          </a>
+          <a href="/reports/attendance?format=xlsx">
+            <Button variant="outline">Download Excel</Button>
+          </a>
+        </div>
       </Card>
 
       {canFinance && (
         <Card>
           <CardHeader>
             <CardTitle>Finance dataset</CardTitle>
-            <CardDescription>Filtered category and channel amounts, totals and notes (CSV). Finance-authorized users only.</CardDescription>
+            <CardDescription>Category and channel amounts, totals and notes. Finance-authorized users only.</CardDescription>
           </CardHeader>
-          <a href="/reports/finance">
-            <Button variant="outline">Download CSV</Button>
-          </a>
+          <div className="flex gap-2">
+            <a href="/reports/finance">
+              <Button variant="outline">Download CSV</Button>
+            </a>
+            <a href="/reports/finance?format=xlsx">
+              <Button variant="outline">Download Excel</Button>
+            </a>
+          </div>
         </Card>
       )}
 

@@ -43,3 +43,19 @@ export const inviteUserSchema = z.object({
   full_name: z.string().min(1, "Name is required"),
 });
 export type InviteUserValues = z.infer<typeof inviteUserSchema>;
+
+export const provisionChurchSchema = z.object({
+  name: z.string().min(1, "Church name is required"),
+  currency: z.string().min(3, "Use a 3-letter currency code").max(3).toUpperCase(),
+  timezone: z.string().min(1, "Timezone is required"),
+});
+export type ProvisionChurchValues = z.infer<typeof provisionChurchSchema>;
+
+export const churchSettingsSchema = z.object({
+  name: z.string().min(1, "Church name is required"),
+  currency_code: z.string().min(3, "Use a 3-letter currency code").max(3).toUpperCase(),
+  timezone: z.string().min(1, "Timezone is required"),
+  reporting_year_start_month: z.coerce.number().int().min(1).max(12),
+  finance_requires_independent_verification: z.boolean().default(true),
+});
+export type ChurchSettingsValues = z.infer<typeof churchSettingsSchema>;

@@ -31,6 +31,9 @@ export function AppShell({
     { href: "/admin/categories", label: "Offering categories", show: permissions.isAdministrator() },
     { href: "/admin/branches", label: "Branches & venues", show: permissions.isAdministrator() },
     { href: "/admin/users", label: "Users & roles", show: permissions.isAdministrator() },
+    { href: "/admin/audit", label: "Audit log", show: permissions.isAdministrator() },
+    { href: "/admin/settings", label: "Church settings", show: permissions.isAdministrator() },
+    { href: "/help", label: "Help", show: true },
   ];
 
   return (
@@ -41,23 +44,27 @@ export function AppShell({
             {process.env.NEXT_PUBLIC_APP_NAME ?? "Church Operations"}
           </Link>
         </div>
-        <nav className="flex sm:flex-col overflow-x-auto sm:overflow-visible px-2 sm:px-0 pb-2 sm:pb-0">
+        <nav aria-label="Main navigation" className="flex sm:flex-col overflow-x-auto sm:overflow-visible px-2 sm:px-0 pb-2 sm:pb-0">
           {navItems
             .filter((i) => i.show)
-            .map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "whitespace-nowrap px-4 py-2.5 text-sm rounded-brand sm:rounded-none",
-                  pathname.startsWith(item.href)
-                    ? "bg-brand-muted text-brand sm:border-l-2 sm:border-brand"
-                    : "text-foreground hover:bg-surface-border/40"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            .map((item) => {
+              const isActive = pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "whitespace-nowrap px-4 py-2.5 text-sm rounded-brand sm:rounded-none",
+                    isActive
+                      ? "bg-brand-muted text-brand sm:border-l-2 sm:border-brand"
+                      : "text-foreground hover:bg-surface-border/40"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
         </nav>
         <div className="hidden sm:block p-4 mt-auto border-t border-surface-border">
           <p className="text-sm font-medium">{ctx.user.full_name}</p>
@@ -68,7 +75,9 @@ export function AppShell({
           </form>
         </div>
       </aside>
-      <div className="flex-1 min-w-0">{children}</div>
+      <div id="main-content" tabIndex={-1} className="flex-1 min-w-0 outline-none">
+        {children}
+      </div>
     </div>
   );
 }

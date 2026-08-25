@@ -49,6 +49,32 @@ export async function listProgrammes(branchId?: string): Promise<ProgrammeListRo
   return (data ?? []) as unknown as ProgrammeListRow[];
 }
 
+/** SRV-08: looks for an existing occurrence with the same branch, service
+ * type and date. Called from the wizard before submit so the usher gets a
+ * friendly warning (with a chance to add an override reason) instead of a
+ * raw unique-constraint error from the database. Not a hard block — some
+ * churches legitimately run two services of the same type on the same day
+ * (e.g. AM/PM), which is exactly why this is a warn-and-override, not a
+ * unique constraint on its own. */
+export async function checkDuplicateService(
+  branchId: string,
+  serviceTypeId: string,
+  programmeDate: string,
+  excludeProgrammeId?: string
+): Promise<{ id: string; programme_name: string } | null> {
+  if (!branchId || !serviceTypeId || !programmeDate) return null;
+  const supabase = await createClient();
+  let query = supabase
+    .from("programme_occurrences")
+    .select("id, programme_name")
+    .eq("branch_id", branchId)
+    .eq("service_type_id", serviceTypeId)
+    .eq("programme_date", programmeDate);
+  if (excludeProgrammeId) query = query.neq("id", excludeProgrammeId);
+  const { data } = await query.limit(1).maybeSingle();
+  return data ?? null;
+}
+
 /** Creates a draft programme + its (initially empty) attendance record.
  * SRV-08 duplicate check happens client-side before calling this (warns, does
  * not hard-block) and server-side via the partial unique index as a backstop. */
@@ -86,6 +112,19 @@ export async function createDraftProgramme(values: ProgrammeEntryValues) {
     throw new Error("First-timers/converts exceed total attendance — add an explanatory note (ATT-07).");
   }
 
+  // SRV-08 server-side backstop: the wizard already warns and collects an
+  // override reason client-side, but re-check here in case of a race (two
+  // ushers submitting at once) or a client that skipped the check.
+  const duplicate = await checkDuplicateService(values.branch_id, values.service_type_id, values.programme_date);
+  if (duplicate && !values.duplicate_override) {
+    throw new Error(
+      `A ${values.classification === "special_event" ? "programme" : "service"} already exists for this branch, service type and date ("${duplicate.programme_name}"). Confirm this is intentional and add a reason to continue.`
+    );
+  }
+  if (duplicate && values.duplicate_override && !values.duplicate_override_reason) {
+    throw new Error("Add a reason for recording a duplicate service on the same day.");
+  }
+
   const { data: programme, error } = await supabase
     .from("programme_occurrences")
     .insert({
@@ -100,6 +139,8 @@ export async function createDraftProgramme(values: ProgrammeEntryValues) {
       sermon_topic: values.sermon_topic || null,
       venue_capacity_snapshot: capacity,
       notes: values.notes || null,
+      duplicate_override: Boolean(duplicate && values.duplicate_override),
+      duplicate_override_reason: duplicate && values.duplicate_override ? values.duplicate_override_reason || null : null,
       created_by: user.id,
     })
     .select()

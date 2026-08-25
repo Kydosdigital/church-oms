@@ -3,8 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { BranchValues, VenueValues, ServiceTypeValues, UserRoleValues, InviteUserValues } from "@/lib/validations/admin";
-import type { Branch, Venue, ServiceType, UserRoleAssignment } from "@/types/domain";
+import type {
+  BranchValues,
+  VenueValues,
+  ServiceTypeValues,
+  UserRoleValues,
+  InviteUserValues,
+  ChurchSettingsValues,
+} from "@/lib/validations/admin";
+import type { Branch, Venue, ServiceType, UserRoleAssignment, Church } from "@/types/domain";
 
 /**
  * Every mutation below still relies on RLS for the actual authorization
@@ -184,9 +191,27 @@ export async function removeUserRole(roleAssignmentId: string) {
   revalidatePath("/admin/users");
 }
 
+/**
+ * `active` is a column-privilege-restricted field (supabase/migrations/0011)
+ * — `authenticated` can no longer write it at all, self or otherwise, to
+ * close the self-service church_id/active escalation gap. Administrators
+ * flip it via the service-role client instead, after the same RLS-bound
+ * administrator check every other admin mutation here uses.
+ */
 export async function setUserActive(userId: string, active: boolean) {
-  const { supabase } = await requireAdministrator();
-  const { error } = await supabase.from("app_users").update({ active }).eq("id", userId);
+  const { userId: adminId } = await requireAdministrator();
+  const supabase = await createClient();
+  const { data: profile } = await supabase.from("app_users").select("church_id").eq("id", adminId).single();
+  if (!profile?.church_id) throw new Error("User is not assigned to a church yet");
+
+  const admin = createAdminClient();
+  // Scope to the same church even though this uses the service-role client —
+  // it bypasses RLS entirely, so the church match has to be enforced here.
+  const { error } = await admin
+    .from("app_users")
+    .update({ active })
+    .eq("id", userId)
+    .eq("church_id", profile.church_id);
   if (error) throw error;
   revalidatePath("/admin/users");
 }
@@ -256,4 +281,95 @@ export async function listBranchesWithVenues(): Promise<BranchWithVenuesRow[]> {
   const supabase = await createClient();
   const { data } = await supabase.from("branches").select("*, venues(*)").order("name");
   return (data ?? []) as unknown as BranchWithVenuesRow[];
+}
+
+// ----------------------------------------------------------------------------
+// Audit log
+// ----------------------------------------------------------------------------
+
+export interface AuditEventRow {
+  id: string;
+  actor_id: string | null;
+  entity_table: string;
+  entity_id: string;
+  action: string;
+  previous_value: unknown;
+  new_value: unknown;
+  created_at: string;
+  app_users: { full_name: string } | null;
+}
+
+export interface AuditLogFilters {
+  entityTable?: string;
+  action?: string;
+  from?: string;
+  to?: string;
+}
+
+/** audit_select RLS (supabase/migrations/0002) already restricts this to
+ * administrators of the row's own church — no extra check needed here beyond
+ * what the query itself returns (an empty result for anyone else). */
+export async function listAuditEvents(filters: AuditLogFilters = {}): Promise<AuditEventRow[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("audit_events")
+    .select("id, actor_id, entity_table, entity_id, action, previous_value, new_value, created_at, app_users(full_name)")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (filters.entityTable) query = query.eq("entity_table", filters.entityTable);
+  if (filters.action) query = query.eq("action", filters.action);
+  if (filters.from) query = query.gte("created_at", filters.from);
+  if (filters.to) query = query.lte("created_at", filters.to);
+
+  const { data } = await query;
+  return (data ?? []) as unknown as AuditEventRow[];
+}
+
+export async function listAuditEntityTables(): Promise<string[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("audit_events").select("entity_table").limit(1000);
+  const set = new Set((data ?? []).map((r) => r.entity_table));
+  return Array.from(set).sort();
+}
+
+// ----------------------------------------------------------------------------
+// Church settings
+// ----------------------------------------------------------------------------
+
+export async function getChurchSettings(): Promise<Church | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase.from("app_users").select("church_id").eq("id", user.id).single();
+  if (!profile?.church_id) return null;
+
+  const { data } = await supabase.from("churches").select("*").eq("id", profile.church_id).single();
+  return (data as Church) ?? null;
+}
+
+/** churches_update RLS is already administrator-gated
+ * (supabase/migrations/0002_rls_policies.sql), so no schema changes were
+ * needed for this screen — just the UI and this action. */
+export async function updateChurchSettings(input: ChurchSettingsValues) {
+  const { supabase, userId } = await requireAdministrator();
+  const { data: profile } = await supabase.from("app_users").select("church_id").eq("id", userId).single();
+  if (!profile?.church_id) throw new Error("User is not assigned to a church yet");
+
+  const { error } = await supabase
+    .from("churches")
+    .update({
+      name: input.name,
+      currency_code: input.currency_code,
+      timezone: input.timezone,
+      reporting_year_start_month: input.reporting_year_start_month,
+      finance_requires_independent_verification: input.finance_requires_independent_verification,
+    })
+    .eq("id", profile.church_id);
+  if (error) throw error;
+
+  revalidatePath("/admin/settings");
 }

@@ -20,7 +20,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`h-full antialiased ${brandSans.variable}`}>
-      <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded-brand focus:bg-brand focus:text-brand-foreground focus:px-4 focus:py-2"
+        >
+          Skip to main content
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

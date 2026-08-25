@@ -1,5 +1,7 @@
+import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { toCsv } from "@/lib/csv";
+import { toXlsx } from "@/lib/xlsx";
 
 interface AttendanceExportRow {
   programme_date: string;
@@ -24,7 +26,8 @@ interface AttendanceExportRow {
  * here is the caller's own session, so RLS applies exactly as it does in the
  * UI — a user without branch/attendance access simply gets no rows, never a
  * server-side bypass. */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const format = request.nextUrl.searchParams.get("format");
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -51,12 +54,23 @@ export async function GET() {
     weddings: p.attendance_records?.[0]?.weddings_count,
   }));
 
-  const csv = toCsv(rows, [
+  const columns = [
     "date", "branch", "programme", "classification", "state", "total_attendance",
     "men", "women", "teenagers", "children", "first_timers", "converts", "new_births", "weddings",
-  ]);
-
+  ] as const;
   const generatedAt = new Date().toISOString();
+
+  if (format === "xlsx") {
+    const buffer = new Uint8Array(await toXlsx(rows, [...columns], "Attendance"));
+    return new Response(buffer, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="attendance-export-${generatedAt.slice(0, 10)}.xlsx"`,
+      },
+    });
+  }
+
+  const csv = toCsv(rows, [...columns]);
 
   return new Response(`# Generated ${generatedAt}\n${csv}\n`, {
     headers: {
