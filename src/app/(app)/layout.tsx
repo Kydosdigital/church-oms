@@ -28,12 +28,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/onboarding");
   }
 
+  const hasRole = (...roles: string[]) => ctx.roles.some((assignment) => roles.includes(assignment.role));
+  const isAdministrator = ctx.permissions.isAdministrator();
+
   // AppShell is a Client Component. Only pass plain serializable data across
   // the Server -> Client boundary, never the PermissionContext class instance.
   const shellContext = {
     user: { full_name: ctx.user.full_name },
     canViewFinance: ctx.permissions.hasFinancePermission(),
-    isAdministrator: ctx.permissions.isAdministrator(),
+    canViewProgrammes:
+      isAdministrator || hasRole("usher", "attendance_verifier", "pastor"),
+    canViewReports:
+      isAdministrator ||
+      hasRole("pastor", "attendance_verifier") ||
+      ctx.permissions.hasFinanceHistoryPermission(),
+    isAdministrator,
   };
 
   return <AppShell ctx={shellContext}>{children}</AppShell>;
