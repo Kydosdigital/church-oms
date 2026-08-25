@@ -102,9 +102,11 @@ export async function inviteUserWithRole(input: InviteUserWithRoleValues) {
       });
       if (adminRoleError) throw adminRoleError;
 
+      // `src/types/database.ts` is generated and may briefly lag a newly
+      // applied enum migration. PostgreSQL already validates this value.
       const { error: superRoleError } = await supabase.from("user_roles").insert({
         user_id: invited.user.id,
-        role: "super_admin",
+        role: "super_admin" as never,
         branch_id: null,
         finance_permission: true,
         finance_history_permission: true,
@@ -112,10 +114,11 @@ export async function inviteUserWithRole(input: InviteUserWithRoleValues) {
       if (superRoleError) throw superRoleError;
     } else {
       // Use the signed-in administrator client for role creation so the normal
-      // RLS policy still participates in authorization.
+      // RLS policy still participates in authorization. This cast only bridges
+      // the generated DB type until it is regenerated from the updated schema.
       const { error: roleError } = await supabase.from("user_roles").insert({
         user_id: invited.user.id,
-        role: input.role,
+        role: input.role as never,
         branch_id: branchId,
         finance_permission: input.finance_permission,
         finance_history_permission: input.finance_permission
