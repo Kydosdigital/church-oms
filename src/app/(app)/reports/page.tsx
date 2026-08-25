@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 
 export default async function ReportsPage() {
   const ctx = await getCurrentUserContext();
-  const canFinance = ctx?.permissions.hasFinancePermission() ?? false;
+  // Financial exports require history permission, not just entry permission
+  // (section: "view past financial records" — exports are historical data).
+  const canFinance = ctx?.permissions.hasFinanceHistoryPermission() ?? false;
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-3xl">

@@ -690,6 +690,7 @@ export type Database = {
         Row: {
           branch_id: string | null
           created_at: string
+          finance_history_permission: boolean
           finance_permission: boolean
           id: string
           role: Database["public"]["Enums"]["app_role"]
@@ -698,6 +699,7 @@ export type Database = {
         Insert: {
           branch_id?: string | null
           created_at?: string
+          finance_history_permission?: boolean
           finance_permission?: boolean
           id?: string
           role: Database["public"]["Enums"]["app_role"]
@@ -706,6 +708,7 @@ export type Database = {
         Update: {
           branch_id?: string | null
           created_at?: string
+          finance_history_permission?: boolean
           finance_permission?: boolean
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
@@ -772,6 +775,10 @@ export type Database = {
     }
     Functions: {
       current_church_id: { Args: never; Returns: string }
+      has_finance_history_permission: {
+        Args: { p_branch_id?: string }
+        Returns: boolean
+      }
       has_finance_permission: {
         Args: { p_branch_id?: string }
         Returns: boolean

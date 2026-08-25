@@ -32,6 +32,9 @@ export const userRoleSchema = z.object({
   role: z.enum(appRoleValues),
   branch_id: z.string().uuid().optional(), // omitted/empty = all branches
   finance_permission: z.boolean().default(false),
+  // Only meaningful when finance_permission is true; defaults to full access
+  // so a newly-assigned finance role isn't unexpectedly restricted.
+  finance_history_permission: z.boolean().default(true),
 });
 export type UserRoleValues = z.infer<typeof userRoleSchema>;
 

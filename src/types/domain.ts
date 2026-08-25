@@ -69,6 +69,11 @@ export interface UserRoleAssignment {
   role: AppRole;
   branch_id: string | null;
   finance_permission: boolean;
+  /** Independent of finance_permission (which only gates entry/submission):
+   * governs whether this role assignment can see OTHER services' amounts,
+   * dashboards/trends and financial exports — not just its own current
+   * entry. See supabase/migrations/0009_finance_history_permission.sql. */
+  finance_history_permission: boolean;
 }
 
 export interface Minister {

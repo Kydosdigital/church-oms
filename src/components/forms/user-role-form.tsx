@@ -19,18 +19,27 @@ export function UserRoleForm({ userId, branches }: { userId: string; branches: B
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<UserRoleValues>({
     resolver: zodResolver(userRoleSchema) as never,
-    defaultValues: { user_id: userId, role: "usher", finance_permission: false },
+    defaultValues: { user_id: userId, role: "usher", finance_permission: false, finance_history_permission: true },
   });
+
+  const financePermission = watch("finance_permission");
 
   async function onSubmit(data: UserRoleValues) {
     setPending(true);
     setError(null);
     try {
       await assignUserRole({ ...data, branch_id: data.branch_id || undefined });
-      reset({ user_id: userId, role: "usher", branch_id: undefined, finance_permission: false });
+      reset({
+        user_id: userId,
+        role: "usher",
+        branch_id: undefined,
+        finance_permission: false,
+        finance_history_permission: true,
+      });
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not assign role");
@@ -75,6 +84,12 @@ export function UserRoleForm({ userId, branches }: { userId: string; branches: B
         <input type="checkbox" className="h-4 w-4" {...register("finance_permission")} />
         Finance access
       </label>
+      {financePermission && (
+        <label className="flex items-center gap-1.5 text-sm h-9" title="Without this, they can only enter/review the current service's offering — not past amounts, other users' entries, dashboards or exports.">
+          <input type="checkbox" className="h-4 w-4" {...register("finance_history_permission")} />
+          View past financial records
+        </label>
+      )}
       <Button type="submit" size="sm" variant="secondary" disabled={pending}>
         {pending ? "Assigning…" : "Assign role"}
       </Button>

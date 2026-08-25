@@ -33,6 +33,12 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Branch protection (section: branch verification): when the signed-in
+  // usher only has one authorised branch, lock the field to it rather than
+  // showing a dropdown — the caller (programmes/new/page.tsx) already scopes
+  // reference.branches down to just the branches this user can submit for.
+  const lockedBranch = reference.branches.length === 1 ? reference.branches[0] : null;
+
   const {
     register,
     handleSubmit,
@@ -45,6 +51,7 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
     // type level only — runtime coercion/validation behaves correctly.
     resolver: zodResolver(programmeEntrySchema) as never,
     defaultValues: {
+      branch_id: lockedBranch?.id,
       classification: "routine",
       men_count: 0,
       women_count: 0,
@@ -65,6 +72,9 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
   const utilization = capacityUtilization(total, capacity);
   const capacityExceeded = exceedsCapacity(total, capacity);
   const outcomesExceeded = outcomesExceedAttendance(values, total);
+  // A venue belongs to exactly one branch — only offer venues for the branch
+  // actually selected, so a record can't end up with mismatched branch/venue.
+  const venuesForBranch = reference.venues.filter((v) => v.branch_id === values.branch_id);
 
   const stepFields: Record<number, (keyof ProgrammeEntryValues)[]> = {
     0: ["branch_id", "service_type_id", "venue_id", "programme_date", "programme_name", "classification"],
@@ -145,12 +155,21 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
           <legend className="sr-only">Service details</legend>
           <div>
             <Label htmlFor="branch_id">Branch</Label>
-            <select id="branch_id" {...register("branch_id")} className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3">
-              <option value="">Select branch</option>
-              {reference.branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
+            {lockedBranch ? (
+              <>
+                <input type="hidden" {...register("branch_id")} />
+                <p id="branch_id" className="rounded-brand border border-surface-border bg-surface h-11 px-3 flex items-center text-sm">
+                  {lockedBranch.name}
+                </p>
+              </>
+            ) : (
+              <select id="branch_id" {...register("branch_id")} className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3">
+                <option value="">Select branch</option>
+                {reference.branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            )}
             <FieldError>{errors.branch_id?.message}</FieldError>
           </div>
           <div>
@@ -165,9 +184,14 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
           </div>
           <div>
             <Label htmlFor="venue_id">Venue</Label>
-            <select id="venue_id" {...register("venue_id")} className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3">
-              <option value="">Select venue</option>
-              {reference.venues.map((v) => (
+            <select
+              id="venue_id"
+              {...register("venue_id")}
+              disabled={!values.branch_id}
+              className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3 disabled:opacity-50"
+            >
+              <option value="">{values.branch_id ? "Select venue" : "Select a branch first"}</option>
+              {venuesForBranch.map((v) => (
                 <option key={v.id} value={v.id}>{v.name} (capacity {v.default_capacity})</option>
               ))}
             </select>

@@ -154,13 +154,22 @@ export async function assignUserRole(input: UserRoleValues) {
   const { data: existing } = await existingQuery.maybeSingle();
 
   const error = existing
-    ? (await supabase.from("user_roles").update({ finance_permission: input.finance_permission }).eq("id", existing.id)).error
+    ? (
+        await supabase
+          .from("user_roles")
+          .update({
+            finance_permission: input.finance_permission,
+            finance_history_permission: input.finance_history_permission,
+          })
+          .eq("id", existing.id)
+      ).error
     : (
         await supabase.from("user_roles").insert({
           user_id: input.user_id,
           role: input.role,
           branch_id: branchId,
           finance_permission: input.finance_permission,
+          finance_history_permission: input.finance_history_permission,
         })
       ).error;
 
@@ -232,7 +241,9 @@ export async function listUsersWithRoles(): Promise<AdminUserRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("app_users")
-    .select("id, full_name, email, active, user_roles(id, user_id, role, branch_id, finance_permission, branches(name))")
+    .select(
+      "id, full_name, email, active, user_roles(id, user_id, role, branch_id, finance_permission, finance_history_permission, branches(name))"
+    )
     .order("full_name");
   return (data ?? []) as unknown as AdminUserRow[];
 }

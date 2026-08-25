@@ -53,7 +53,7 @@ export function UserAdminItem({ user, branches }: { user: AdminUserRow; branches
           <Badge key={r.id} className="gap-1.5">
             {ATTENDANCE_ROLE_LABELS[r.role] ?? r.role}
             {r.branches?.name ? ` · ${r.branches.name}` : " · all branches"}
-            {r.finance_permission ? " · finance" : ""}
+            {r.finance_permission ? (r.finance_history_permission ? " · finance" : " · finance (current only)") : ""}
             <button
               type="button"
               aria-label={`Remove ${ATTENDANCE_ROLE_LABELS[r.role]} role`}

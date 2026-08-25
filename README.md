@@ -38,6 +38,10 @@ in order:
 5. `0005_security_hardening.sql`, `0006`–`0008` — advisor-driven hardening
    (RLS on join tables, function search_path, EXECUTE grants restricted to
    `authenticated`, missing FK indexes, per-row `auth.uid()` re-evaluation).
+6. `0009_finance_history_permission.sql`, `0010` — adds `finance_history_permission`
+   on `user_roles` and tightens `revenue_select` so a finance user without it
+   can only see their own current (non-verified) entry or one pending their
+   own verification — not other services' amounts or other users' entries.
 
 Regenerate `src/types/database.ts` after any schema change:
 
@@ -73,6 +77,31 @@ out of `.env.example`; without it, `inviteUser` fails with a clear error
 instead of silently doing nothing. Never expose this key to the browser
 (no `NEXT_PUBLIC_` prefix) — see `src/lib/supabase/admin.ts`.
 
+Also built, from a later round of stakeholder feedback:
+
+- **Branch protection** — the "New programme" form locks the branch field to
+  the signed-in usher's own assigned branch(es) instead of a freely editable
+  dropdown of every branch in the church (still enforced server-side by RLS
+  either way, so this only removes a confusing failure mode, not a real
+  vulnerability). The venue list is also filtered to the selected branch.
+- **Physical vs. online giving totals** — dashboard cards for total physical
+  giving, total online giving, combined, and each as a percentage of the
+  whole, for the selected date range.
+- **"View past financial records" permission** — a second, independent flag
+  (`finance_history_permission`, defaulting to on) alongside `finance_permission`.
+  A treasurer without it can still enter/review/correct the current service's
+  offering, but can't see previous services' amounts, other users' entries,
+  dashboards, trends, or financial exports — enforced in `revenue_select`
+  (migrations 0009–0010), not just hidden in the UI.
+- **Dashboard date-range picker** — 7/30/90-day, this-year, all-time and
+  custom presets (`src/components/dashboard/date-range-control.tsx`), replacing
+  the previous hardcoded 90-day window.
+
 Next up: email notifications (section 3.2, "should-have"); splitting the
 handful of admin "for all" RLS policies flagged by the Supabase performance
-advisor as `multiple_permissive_policies` (cosmetic, not a security issue).
+advisor as `multiple_permissive_policies` (cosmetic, not a security issue); a
+"service number" field for multiple same-day occurrences of the same service
+type; and a possible move from the current men/women/teenagers/children
+attendance buckets to a fuller adult/teen/child × male/female breakdown, if
+that level of detail turns out to be wanted (raised in passing during
+requirements discussion but not in the PRD this app was built from).
