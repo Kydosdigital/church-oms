@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Church Operations Management System (Church OMS)
 
-## Getting Started
+A responsive Next.js + Supabase application implementing the Church Operations
+Management System PRD: attendance capture, two-person verification, configurable
+offering categories, project fundraising progress, dashboards and permission-
+controlled reports.
 
-First, run the development server:
+## Stack
+
+- **Frontend**: Next.js 16 (App Router, Turbopack), TypeScript, Tailwind CSS v4
+- **Backend**: Supabase (Postgres, Auth, Row-Level Security)
+- **Charts**: Recharts
+- **Forms**: react-hook-form + zod
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in your Supabase project URL + anon key
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+All schema, RLS policies and workflow RPCs live in `supabase/migrations/`, applied
+in order:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. `0001_core_schema.sql` — churches, branches, venues, service types, users/roles,
+   programme occurrences, attendance, offering categories, revenue entries,
+   sign-offs, audit log.
+2. `0002_rls_policies.sql` — branch-scoped access, explicit finance permission
+   (independent of role/admin status), locked/verified record enforcement.
+3. `0003_functions.sql` — SECURITY DEFINER RPCs for submit/verify/return/reopen
+   on both attendance and finance, enforcing separation of duties server-side.
+4. `0004_seed_defaults.sql` — `provision_new_church(...)` helper for onboarding
+   a new tenant with sane defaults (Main Branch, default service types and
+   offering categories).
+5. `0005_security_hardening.sql`, `0006`–`0008` — advisor-driven hardening
+   (RLS on join tables, function search_path, EXECUTE grants restricted to
+   `authenticated`, missing FK indexes, per-row `auth.uid()` re-evaluation).
 
-## Learn More
+Regenerate `src/types/database.ts` after any schema change:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npx supabase gen types typescript --project-id <your-project-ref> > src/types/database.ts
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Branding
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`src/app/globals.css` defines every color/spacing/font token as a CSS variable
+under a single "BRANDING LAYER" comment block. No component hardcodes a color
+or font name. The current palette and Open Sans font were supplied by
+21st.dev; to swap branding again, only that file (and, for a different font,
+`src/app/layout.tsx`, which loads the font via `next/font/google`) needs to
+change. Dark mode currently follows the OS colour-scheme preference — there is
+no manual toggle in the UI yet, though the `.dark` class is wired up and ready
+for one.
 
-## Deploy on Vercel
+## What's built vs. what's next
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Built: auth, branch/role model, programme + attendance entry (phone-first wizard
+with live capacity/outcome validation), attendance verification workflow,
+revenue entry with configurable offering categories and project progress,
+dashboards (attendance + revenue trends, pending approvals, project progress),
+CSV exports and a print-ready programme report.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Next implementation pass (structure and RLS already in place, UI is a read-only
+stub): editing branches/venues/service types from the admin screens; inviting
+users and assigning roles/branches from the UI (currently done via direct
+Supabase table access); email notifications (section 3.2, "should-have").

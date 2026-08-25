@@ -1,26 +1,224 @@
 @import "tailwindcss";
 
+/* ============================================================================
+ * Design tokens — BRANDING LAYER (supplied by 21st.dev, applied 2026-08-25)
+ * ----------------------------------------------------------------------------
+ * This is the ONLY file that should need to change for colors and type — no
+ * component hardcodes a hex value or font name. The app's own semantic tokens
+ * (--background, --brand, --surface, etc.) are mapped below onto the palette
+ * 21st.dev supplied, so every existing `bg-background`, `text-foreground`,
+ * `bg-brand`, `text-muted` class keeps working unchanged. The raw 21st.dev
+ * token set (--primary, --card, --chart-1..5, --sidebar-*, etc.) is also
+ * exposed via @theme inline for any new component that wants it directly.
+ * To swap branding again: replace the hex values in :root / .dark below (and,
+ * for a custom font, the --font-sans/--font-serif/--font-mono values).
+ * ==========================================================================*/
+
 :root {
+  /* ---- 21st.dev source palette ---- */
+  --card: #f7f8f8;
+  --ring: #1da1f2;
+  --input: #f7f9fa;
+  --muted: #e5e5e6;
+  --accent: #e3ecf6;
+  --border: #e1eaef;
+  --radius: 1.3rem;
+  --chart-1: #1e9df1;
+  --chart-2: #00b87a;
+  --chart-3: #f7b928;
+  --chart-4: #17bf63;
+  --chart-5: #e0245e;
+  --popover: #ffffff;
+  --primary: #1e9df1;
+  --sidebar: #f7f8f8;
+  --font-mono: Menlo, monospace;
+  --font-sans: var(--font-open-sans), "Open Sans", sans-serif;
+  --secondary: #0f1419;
   --background: #ffffff;
-  --foreground: #171717;
+  --font-serif: Georgia, serif;
+  --foreground: #0f1419;
+  --destructive: #f4212e;
+  --sidebar-ring: #1da1f2;
+  --sidebar-accent: #e3ecf6;
+  --sidebar-border: #e1e8ed;
+  --card-foreground: #0f1419;
+  --sidebar-primary: #1e9df1;
+  --muted-foreground: #536471;
+  --accent-foreground: #1e9df1;
+  --popover-foreground: #0f1419;
+  --primary-foreground: #ffffff;
+  --sidebar-foreground: #0f1419;
+  --secondary-foreground: #ffffff;
+  --destructive-foreground: #ffffff;
+  --sidebar-accent-foreground: #1e9df1;
+  --sidebar-primary-foreground: #ffffff;
+
+  /* ---- app semantic tokens, mapped onto the palette above ---- */
+  --surface: var(--card);
+  --surface-border: var(--border);
+
+  --brand: var(--primary);
+  --brand-foreground: var(--primary-foreground);
+  --brand-muted: var(--accent);
+
+  /* Semantic status tokens (never rely on color alone — section 8.3) */
+  --success: var(--chart-4);
+  --warning: var(--chart-3);
+  --danger: var(--destructive);
+  --info: var(--chart-1);
+
+  --font-brand-sans: var(--font-sans);
+  --font-brand-mono: var(--font-mono);
+}
+
+.dark {
+  --card: #17181c;
+  --ring: #1da1f2;
+  --input: #22303c;
+  --muted: #181818;
+  --accent: #061622;
+  --border: #242628;
+  --chart-1: #1e9df1;
+  --chart-2: #00b87a;
+  --chart-3: #f7b928;
+  --chart-4: #17bf63;
+  --chart-5: #e0245e;
+  --popover: #000000;
+  --primary: #1c9cf0;
+  --sidebar: #17181c;
+  --secondary: #f0f3f4;
+  --background: #000000;
+  --foreground: #e7e9ea;
+  --destructive: #f4212e;
+  --sidebar-ring: #1da1f2;
+  --sidebar-accent: #061622;
+  --sidebar-border: #38444d;
+  --card-foreground: #d9d9d9;
+  --sidebar-primary: #1da1f2;
+  --muted-foreground: #72767a;
+  --accent-foreground: #1c9cf0;
+  --popover-foreground: #e7e9ea;
+  --primary-foreground: #ffffff;
+  --sidebar-foreground: #d9d9d9;
+  --secondary-foreground: #0f1419;
+  --destructive-foreground: #ffffff;
+  --sidebar-accent-foreground: #1c9cf0;
+  --sidebar-primary-foreground: #ffffff;
+
+  --surface: var(--card);
+  --surface-border: var(--border);
+  --brand: var(--primary);
+  --brand-foreground: var(--primary-foreground);
+  --brand-muted: var(--accent);
+  --success: var(--chart-4);
+  --warning: var(--chart-3);
+  --danger: var(--destructive);
+  --info: var(--chart-1);
+}
+
+/* No manual light/dark toggle exists yet in the UI, so also follow the OS
+ * preference automatically (mirrors .dark above) until one is added. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --card: #17181c;
+    --ring: #1da1f2;
+    --input: #22303c;
+    --muted: #181818;
+    --accent: #061622;
+    --border: #242628;
+    --popover: #000000;
+    --primary: #1c9cf0;
+    --sidebar: #17181c;
+    --secondary: #f0f3f4;
+    --background: #000000;
+    --foreground: #e7e9ea;
+    --sidebar-ring: #1da1f2;
+    --sidebar-accent: #061622;
+    --sidebar-border: #38444d;
+    --card-foreground: #d9d9d9;
+    --sidebar-primary: #1da1f2;
+    --muted-foreground: #72767a;
+    --accent-foreground: #1c9cf0;
+    --popover-foreground: #e7e9ea;
+    --sidebar-foreground: #d9d9d9;
+    --secondary-foreground: #0f1419;
+    --sidebar-accent-foreground: #1c9cf0;
+
+    --surface: var(--card);
+    --surface-border: var(--border);
+    --brand: var(--primary);
+    --brand-foreground: var(--primary-foreground);
+    --brand-muted: var(--accent);
+    --success: var(--chart-4);
+    --warning: var(--chart-3);
+    --danger: var(--destructive);
+    --info: var(--chart-1);
+  }
 }
 
 @theme inline {
+  /* app semantic tokens (used throughout existing components) */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-surface: var(--surface);
+  --color-surface-border: var(--surface-border);
+  --color-muted: var(--muted-foreground);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-muted: var(--brand-muted);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+
+  --font-sans: var(--font-brand-sans);
+  --font-mono: var(--font-brand-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-brand: var(--radius);
+
+  /* raw 21st.dev tokens, exposed for any new component */
+  --color-card: var(--card);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-popover: var(--popover);
+  --color-primary: var(--primary);
+  --color-sidebar: var(--sidebar);
+  --color-secondary: var(--secondary);
+  --color-destructive: var(--destructive);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-card-foreground: var(--card-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-brand-sans);
+}
+
+/* Accessible focus ring — never rely on color alone (section 8.3) */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
