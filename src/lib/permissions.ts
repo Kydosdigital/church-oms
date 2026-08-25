@@ -15,12 +15,17 @@ export class PermissionContext {
     );
   }
 
-  isAdministrator(): boolean {
-    return this.hasRole("administrator");
+  isSuperAdmin(): boolean {
+    return this.hasRole("super_admin");
   }
 
-  /** Finance visibility is explicit and independent of role (section 2.1) —
-   *  an administrator does NOT automatically see finance data. */
+  /** Super Admin inherits all Administrator capabilities within the church. */
+  isAdministrator(): boolean {
+    return this.isSuperAdmin() || this.hasRole("administrator");
+  }
+
+  /** Finance visibility remains explicit for ordinary roles. Super Admin rows
+   * are database-constrained to full finance visibility. */
   hasFinancePermission(branchId?: string): boolean {
     return this.roles.some(
       (r) => r.finance_permission && (r.branch_id === null || !branchId || r.branch_id === branchId)
@@ -29,9 +34,7 @@ export class PermissionContext {
 
   /** A second, independent flag on top of hasFinancePermission: whether this
    * user can see OTHER services' amounts — dashboards, trends, exports — not
-   * just enter/review their own current/returned entry. Defaults to true for
-   * every existing finance-permitted user; an administrator can restrict a
-   * specific person from the Users & roles screen. */
+   * just enter/review their own current/returned entry. */
   hasFinanceHistoryPermission(branchId?: string): boolean {
     return this.roles.some(
       (r) =>
@@ -55,12 +58,8 @@ export class PermissionContext {
   }
 
   /** Branch ids this user can create programmes for (usher role), or "all"
-   * for global usher access or an administrator (who may need to create on
-   * behalf of any branch). Used to lock the branch field on the programme
-   * entry form to the user's own branch(es), rather than a freely editable
-   * dropdown of every branch in the church — reduces accidental cross-branch
-   * submissions (server-side RLS already rejects them; this just avoids the
-   * confusing failure). */
+   * for global usher access or an administrator/super admin acting on behalf
+   * of a branch. */
   usherBranchScope(): "all" | string[] {
     if (this.isAdministrator()) return "all";
     if (this.roles.some((r) => r.role === "usher" && r.branch_id === null)) return "all";
@@ -81,6 +80,10 @@ export class PermissionContext {
 
   canManageAdmin(): boolean {
     return this.isAdministrator();
+  }
+
+  canAssignSuperAdmin(): boolean {
+    return this.isSuperAdmin();
   }
 
   canViewDashboards(): boolean {
