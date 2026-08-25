@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { signOut } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
-import type { CurrentUserContext } from "@/lib/data/current-user";
 
 interface NavItem {
   href: string;
@@ -14,26 +13,33 @@ interface NavItem {
   show: boolean;
 }
 
+interface AppShellContext {
+  user: {
+    full_name: string;
+  };
+  canViewFinance: boolean;
+  isAdministrator: boolean;
+}
+
 export function AppShell({
   ctx,
   children,
 }: {
-  ctx: CurrentUserContext;
+  ctx: AppShellContext;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { permissions } = ctx;
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", show: true },
     { href: "/programmes", label: "Programmes", show: true },
-    { href: "/revenue", label: "Revenue", show: permissions.hasFinancePermission() },
+    { href: "/revenue", label: "Revenue", show: ctx.canViewFinance },
     { href: "/reports", label: "Reports", show: true },
-    { href: "/admin/categories", label: "Offering categories", show: permissions.isAdministrator() },
-    { href: "/admin/branches", label: "Branches & venues", show: permissions.isAdministrator() },
-    { href: "/admin/users", label: "Users & roles", show: permissions.isAdministrator() },
-    { href: "/admin/audit", label: "Audit log", show: permissions.isAdministrator() },
-    { href: "/admin/settings", label: "Church settings", show: permissions.isAdministrator() },
+    { href: "/admin/categories", label: "Offering categories", show: ctx.isAdministrator },
+    { href: "/admin/branches", label: "Branches & venues", show: ctx.isAdministrator },
+    { href: "/admin/users", label: "Users & roles", show: ctx.isAdministrator },
+    { href: "/admin/audit", label: "Audit log", show: ctx.isAdministrator },
+    { href: "/admin/settings", label: "Church settings", show: ctx.isAdministrator },
     { href: "/help", label: "Help", show: true },
   ];
 
