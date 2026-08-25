@@ -28,5 +28,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/onboarding");
   }
 
-  return <AppShell ctx={ctx}>{children}</AppShell>;
+  // AppShell is a Client Component. Only pass plain serializable data across
+  // the Server -> Client boundary, never the PermissionContext class instance.
+  const shellContext = {
+    user: { full_name: ctx.user.full_name },
+    canViewFinance: ctx.permissions.hasFinancePermission(),
+    isAdministrator: ctx.permissions.isAdministrator(),
+  };
+
+  return <AppShell ctx={shellContext}>{children}</AppShell>;
 }
