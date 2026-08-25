@@ -181,11 +181,21 @@ These are the real open items — nothing here is secretly finished:
   was flagged to the user but not confirmed as fixed at handover time.**
 - **Service-role key rotation** — see section 8; not confirmed done at
   handover time.
-- **Marketing/informational website** — separate, not-started effort,
-  explicitly blocked on one decision: is this being sold to other churches
-  (needs pricing/multi-tenant framing) or built for this one client (a
-  single "get started" page is enough)? Don't start building this without
-  that decision.
+- **Marketing website** — now BUILT (the blocking question was answered:
+  it is positioned as SaaS sold to many churches). Five pages under
+  `src/app/(marketing)/` plus the legal pages. Two things still need real
+  values from the business before real traffic arrives:
+  - **Pricing is placeholder** — every figure lives in
+    `src/lib/marketing/pricing.ts` and was invented to give the page a
+    shape. Nobody has set real prices.
+  - **Contact details** — `src/lib/marketing/site.ts` publishes the project
+    account email; swap it for a dedicated support address. The contact
+    form posts to `CONTACT_WEBHOOK_URL` (see `.env.example`); until that is
+    set, the form tells visitors to email instead.
+
+  There are deliberately no testimonials, customer logos or usage stats on
+  the site — none exist yet, and inventing them would be misleading. Add
+  real ones when there are real ones.
 - **Email notifications** — PRD section 3.2, marked "should-have," not
   started.
 - **Fuller attendance breakdown** (adult/teen/child × male/female instead

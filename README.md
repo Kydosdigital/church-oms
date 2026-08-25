@@ -20,6 +20,40 @@ cp .env.example .env.local   # fill in your Supabase project URL + anon key
 npm run dev
 ```
 
+## Marketing site
+
+The public marketing site lives in `src/app/(marketing)/` — home, `/features`,
+`/pricing`, `/about`, `/contact`, plus `/privacy` and `/terms`. It shares the
+app's design tokens but adds a theme-independent "MARKETING LAYER" in
+`globals.css` (the `ink*` colours), so a dark hero stays dark regardless of the
+visitor's OS colour scheme.
+
+Two things need real values before this is promoted to a real audience:
+
+- **Pricing is placeholder.** Every number, the currency and the billing period
+  come from `src/lib/marketing/pricing.ts`. Nothing in the business has set
+  these; they exist so the page has a shape. Change them there and the pricing
+  page, homepage teaser and pricing JSON-LD all update together.
+- **Contact details.** `src/lib/marketing/site.ts` holds the published contact
+  email (currently the project account address) and the stated response time.
+  The contact form posts to `CONTACT_WEBHOOK_URL` (see `.env.example`) — any
+  endpoint accepting a JSON POST. Unset, the form tells visitors to email
+  directly rather than silently swallowing the message.
+
+There are deliberately **no testimonials, customer logos or usage statistics**
+anywhere on the site, because there are no real ones to show yet. The trust
+sections use verifiable product facts instead. If real quotes arrive later,
+they belong in their own section rather than invented to fill a gap.
+
+The hero's WebGL particle field is `src/components/marketing/particle-field.tsx`
+(raw Three.js, no react-three wrapper). All motion runs in the vertex shader,
+rendering pauses off-screen and when the tab is hidden, it honours
+`prefers-reduced-motion`, and it degrades to nothing if WebGL is unavailable.
+
+Photography is in `public/images/`, sourced from Unsplash under their licence —
+see `public/images/CREDITS.md`. Swapping any file at the same path is all that's
+needed to replace it with the client's own photography.
+
 ## Project docs and Claude Code governance
 
 - `docs/PRODUCT.md` — what this app is, who it's for, the submit → verify →

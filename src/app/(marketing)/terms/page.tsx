@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LegalPage } from "@/components/marketing/legal-page";
 
 export const metadata = {
   title: "Terms of use",
@@ -8,16 +8,8 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <main id="main-content" tabIndex={-1} className="flex-1 px-6 py-16 max-w-2xl mx-auto space-y-6 outline-none">
-      <div>
-        <Link href="/" className="text-sm text-brand underline">
-          ← Back
-        </Link>
-      </div>
-      <h1 className="text-2xl font-semibold">Terms of use</h1>
-      <p className="text-sm text-muted">Last updated: {new Date().toISOString().slice(0, 10)}</p>
+    <LegalPage title="Terms of use">
 
-      <div className="space-y-4 text-sm leading-relaxed">
         <p>
           This application is provided to your church for internal operations management —
           recording attendance, service outcomes, offerings, and related approvals. By using it,
@@ -57,7 +49,6 @@ export default function TermsPage() {
 
         <h2 className="text-lg font-semibold pt-2">Contact</h2>
         <p>Questions about these terms should be directed to your church administrator.</p>
-      </div>
-    </main>
+    </LegalPage>
   );
 }
