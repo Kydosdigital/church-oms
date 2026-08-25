@@ -11,12 +11,12 @@ export default async function UsersAdminPage() {
       <div>
         <h1 className="text-2xl font-semibold">Users & roles</h1>
         <p className="text-sm text-muted">
-          A person may hold more than one role. Finance visibility is explicit and independent of
-          role — an administrator does not automatically see finance data (section 2.1).
+          Invite staff and key volunteers into this church with their first role already assigned.
+          A person may hold more than one role, and finance visibility remains explicit.
         </p>
       </div>
 
-      <InviteUserForm />
+      <InviteUserForm branches={branches} />
 
       <div className="divide-y divide-surface-border rounded-brand border border-surface-border overflow-hidden">
         {userList.map((u) => (
