@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { UserRoleValues } from "@/lib/validations/admin";
+import type { ManagedUserRoleValues } from "@/lib/validations/admin";
 
 async function getAccessActor() {
   const supabase = await createClient();
@@ -68,17 +68,20 @@ async function upsertRole(
   supabase: Awaited<ReturnType<typeof createClient>>,
   input: {
     user_id: string;
-    role: UserRoleValues["role"];
+    role: ManagedUserRoleValues["role"];
     branch_id: string | null;
     finance_permission: boolean;
     finance_history_permission: boolean;
   }
 ) {
+  // src/types/database.ts is generated from Supabase and will be regenerated
+  // after this schema change is merged. The casts below only bridge that stale
+  // generated snapshot; PostgreSQL already knows about `super_admin`.
   let existingQuery = supabase
     .from("user_roles")
     .select("id")
     .eq("user_id", input.user_id)
-    .eq("role", input.role);
+    .eq("role", input.role as never);
 
   existingQuery = input.branch_id
     ? existingQuery.eq("branch_id", input.branch_id)
@@ -94,7 +97,7 @@ async function upsertRole(
           finance_history_permission: input.finance_history_permission,
         })
         .eq("id", existing.id)
-    : await supabase.from("user_roles").insert(input);
+    : await supabase.from("user_roles").insert(input as never);
 
   if (error) throw error;
 }
@@ -107,16 +110,13 @@ async function upsertRole(
  * Administrator role so older server-side admin checks continue to work while
  * Super Admin remains a strict superset of Administrator.
  */
-export async function assignManagedUserRole(input: UserRoleValues) {
+export async function assignManagedUserRole(input: ManagedUserRoleValues) {
   const { supabase, churchId, isSuperAdmin } = await getAccessActor();
   await assertTargetInChurch(supabase, input.user_id, churchId);
 
   if (input.role === "super_admin") {
     if (!isSuperAdmin) throw new Error("Only a Super Admin can assign Super Admin access");
 
-    // Keep the normal Administrator role as the implementation companion for
-    // legacy server checks. Its finance flags stay false because Super Admin's
-    // own role is the one that grants complete finance visibility.
     await upsertRole(supabase, {
       user_id: input.user_id,
       role: "administrator",
@@ -165,16 +165,17 @@ export async function removeManagedUserRole(roleAssignmentId: string) {
   if (!assignment) throw new Error("Role assignment not found");
   await assertTargetInChurch(supabase, assignment.user_id, churchId);
 
-  if (assignment.role === "super_admin" && !isSuperAdmin) {
+  const assignmentRole = assignment.role as string;
+  if (assignmentRole === "super_admin" && !isSuperAdmin) {
     throw new Error("Only a Super Admin can remove Super Admin access");
   }
 
-  if (assignment.role === "administrator") {
+  if (assignmentRole === "administrator") {
     const { data: superAdminRole } = await supabase
       .from("user_roles")
       .select("id")
       .eq("user_id", assignment.user_id)
-      .eq("role", "super_admin")
+      .eq("role", "super_admin" as never)
       .maybeSingle();
 
     if (superAdminRole) {
@@ -192,10 +193,10 @@ export async function removeManagedUserRole(roleAssignmentId: string) {
  * ordinary Administrators cannot deactivate a Super Admin. */
 export async function setManagedUserActive(userId: string, active: boolean) {
   const { supabase } = await getAccessActor();
-  const { error } = await supabase.rpc("set_church_user_active", {
-    p_user_id: userId,
-    p_active: active,
-  });
+  const { error } = await supabase.rpc(
+    "set_church_user_active" as never,
+    { p_user_id: userId, p_active: active } as never
+  );
 
   if (error) throw error;
   revalidatePath("/admin/users");
