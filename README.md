@@ -62,9 +62,17 @@ Built: auth, branch/role model, programme + attendance entry (phone-first wizard
 with live capacity/outcome validation), attendance verification workflow,
 revenue entry with configurable offering categories and project progress,
 dashboards (attendance + revenue trends, pending approvals, project progress),
-CSV exports and a print-ready programme report.
+CSV exports and a print-ready programme report, and full admin CRUD for
+branches/venues/service types and for user roles (including inviting new
+users by email).
 
-Next implementation pass (structure and RLS already in place, UI is a read-only
-stub): editing branches/venues/service types from the admin screens; inviting
-users and assigning roles/branches from the UI (currently done via direct
-Supabase table access); email notifications (section 3.2, "should-have").
+Inviting a user requires `SUPABASE_SERVICE_ROLE_KEY` to be set server-side
+(Project Settings → API → service_role key) — it's the only way to create an
+`auth.users` row for someone who hasn't signed up yet. It's deliberately left
+out of `.env.example`; without it, `inviteUser` fails with a clear error
+instead of silently doing nothing. Never expose this key to the browser
+(no `NEXT_PUBLIC_` prefix) — see `src/lib/supabase/admin.ts`.
+
+Next up: email notifications (section 3.2, "should-have"); splitting the
+handful of admin "for all" RLS policies flagged by the Supabase performance
+advisor as `multiple_permissive_policies` (cosmetic, not a security issue).
