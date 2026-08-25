@@ -29,6 +29,14 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
   const canVerify = ctx?.permissions.canVerifyAttendance(programme.branch_id) ?? false;
   const canReopen = ctx?.permissions.isAdministrator() ?? false;
   const canEnterFinance = ctx?.permissions.hasFinancePermission(programme.branch_id) ?? false;
+  const canUseLiveCounter = Boolean(
+    ctx && (
+      ctx.permissions.hasRole("usher", programme.branch_id) ||
+      ctx.permissions.hasRole("attendance_verifier", programme.branch_id) ||
+      ctx.permissions.hasRole("pastor") ||
+      ctx.permissions.isAdministrator()
+    )
+  );
 
   const utilization = capacityUtilization(attendance.total_attendance, programme.venue_capacity_snapshot);
 
@@ -41,6 +49,22 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
         </div>
         <StateBadge state={programme.state} />
       </div>
+
+      {canUseLiveCounter && (
+        <Card className="border-brand/30 bg-brand-muted/30">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="font-semibold">Live attendance counter</p>
+              <p className="mt-1 text-sm text-muted">
+                Let multiple ushers tap their own counters and combine every doorway into one live total.
+              </p>
+            </div>
+            <Link href={`/programmes/${programme.id}/counter`}>
+              <Button>Open live counter</Button>
+            </Link>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
