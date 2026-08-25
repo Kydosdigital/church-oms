@@ -11,7 +11,8 @@ export type AppRole =
   | "treasurer"
   | "finance_verifier"
   | "pastor"
-  | "administrator";
+  | "administrator"
+  | "super_admin";
 
 export type RecordState = "draft" | "submitted" | "returned" | "verified" | "reopened";
 
@@ -198,6 +199,7 @@ export const ATTENDANCE_ROLE_LABELS: Record<AppRole, string> = {
   finance_verifier: "Finance Verifier",
   pastor: "Pastor",
   administrator: "Administrator",
+  super_admin: "Super Admin",
 };
 
 export const RECORD_STATE_LABELS: Record<RecordState, string> = {
