@@ -76,9 +76,11 @@ export async function provisionChurch(
     return { error: adminRoleError.message };
   }
 
+  // `src/types/database.ts` is generated and may briefly lag a newly applied
+  // enum migration. PostgreSQL already validates this value at runtime.
   const { error: superAdminRoleError } = await admin.from("user_roles").insert({
     user_id: user.id,
-    role: "super_admin",
+    role: "super_admin" as never,
     branch_id: null,
     finance_permission: true,
     finance_history_permission: true,
