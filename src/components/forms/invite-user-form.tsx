@@ -14,7 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { ATTENDANCE_ROLE_LABELS, type Branch } from "@/types/domain";
 
-export function InviteUserForm({ branches }: { branches: Branch[] }) {
+export function InviteUserForm({
+  branches,
+  canAssignSuperAdmin,
+}: {
+  branches: Branch[];
+  canAssignSuperAdmin: boolean;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -38,14 +44,17 @@ export function InviteUserForm({ branches }: { branches: Branch[] }) {
 
   const role = watch("role");
   const isFinanceRole = role === "treasurer" || role === "finance_verifier";
+  const isSuperAdminRole = role === "super_admin";
+  const assignableRoles = appRoleValues.filter(
+    (value) => canAssignSuperAdmin || value !== "super_admin"
+  );
 
   useEffect(() => {
-    // A treasurer or finance verifier needs finance access to perform the
-    // responsibility their role implies. Other roles remain non-finance by
-    // default and can still be given an additional finance role later.
-    setValue("finance_permission", isFinanceRole);
-    setValue("finance_history_permission", true);
-  }, [isFinanceRole, setValue]);
+    const hasFinance = isFinanceRole || isSuperAdminRole;
+    setValue("finance_permission", hasFinance);
+    setValue("finance_history_permission", hasFinance);
+    if (isSuperAdminRole) setValue("branch_id", undefined);
+  }, [isFinanceRole, isSuperAdminRole, setValue]);
 
   async function onSubmit(data: InviteUserWithRoleValues) {
     setPending(true);
@@ -54,14 +63,20 @@ export function InviteUserForm({ branches }: { branches: Branch[] }) {
     try {
       await inviteUserWithRole({
         ...data,
-        branch_id: data.branch_id || undefined,
-        finance_permission: isFinanceRole,
-        finance_history_permission: isFinanceRole ? data.finance_history_permission : false,
+        branch_id: isSuperAdminRole ? undefined : data.branch_id || undefined,
+        finance_permission: isSuperAdminRole || isFinanceRole,
+        finance_history_permission: isSuperAdminRole
+          ? true
+          : isFinanceRole
+            ? data.finance_history_permission
+            : false,
       });
 
-      const branchName = data.branch_id
-        ? branches.find((branch) => branch.id === data.branch_id)?.name ?? "Selected branch"
-        : "All branches";
+      const branchName = isSuperAdminRole
+        ? "All branches"
+        : data.branch_id
+          ? branches.find((branch) => branch.id === data.branch_id)?.name ?? "Selected branch"
+          : "All branches";
 
       setSuccess(
         `Invite sent to ${data.email} as ${ATTENDANCE_ROLE_LABELS[data.role]} · ${branchName}. Their access is ready when they sign in.`
@@ -113,7 +128,7 @@ export function InviteUserForm({ branches }: { branches: Branch[] }) {
             {...register("role")}
             className="block w-full rounded-brand border border-surface-border bg-background h-10 px-3 text-sm"
           >
-            {appRoleValues.map((value) => (
+            {assignableRoles.map((value) => (
               <option key={value} value={value}>
                 {ATTENDANCE_ROLE_LABELS[value]}
               </option>
@@ -126,7 +141,8 @@ export function InviteUserForm({ branches }: { branches: Branch[] }) {
           <select
             id="invite-branch"
             {...register("branch_id")}
-            className="block w-full rounded-brand border border-surface-border bg-background h-10 px-3 text-sm"
+            disabled={isSuperAdminRole}
+            className="block w-full rounded-brand border border-surface-border bg-background h-10 px-3 text-sm disabled:opacity-60"
           >
             <option value="">All branches</option>
             {branches.map((branch) => (
@@ -139,7 +155,17 @@ export function InviteUserForm({ branches }: { branches: Branch[] }) {
         </div>
       </div>
 
-      {isFinanceRole && (
+      {isSuperAdminRole && (
+        <div className="rounded-brand bg-brand-muted p-3 space-y-1">
+          <p className="text-sm font-medium text-brand">Full church access</p>
+          <p className="text-xs text-muted">
+            Super Admin is church-wide, includes complete finance visibility, all administration,
+            and permission to appoint another Super Admin.
+          </p>
+        </div>
+      )}
+
+      {isFinanceRole && !isSuperAdminRole && (
         <div className="rounded-brand bg-surface-border/30 p-3 space-y-2">
           <p className="text-sm font-medium">Finance access included</p>
           <p className="text-xs text-muted">
