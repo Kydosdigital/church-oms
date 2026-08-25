@@ -18,7 +18,11 @@ async function requireAdministrator() {
     .select("role")
     .eq("user_id", user.id);
 
-  if (!(roles ?? []).some((r) => r.role === "administrator")) {
+  const roleNames = (roles ?? []).map((row) => row.role as string);
+  const isSuperAdmin = roleNames.includes("super_admin");
+  const isAdministrator = isSuperAdmin || roleNames.includes("administrator");
+
+  if (!isAdministrator) {
     throw new Error("Only administrators can invite users");
   }
 
@@ -32,7 +36,7 @@ async function requireAdministrator() {
     throw new Error("Administrator is not assigned to a church");
   }
 
-  return { supabase, churchId: profile.church_id };
+  return { supabase, churchId: profile.church_id, isSuperAdmin };
 }
 
 /**
@@ -43,8 +47,14 @@ async function requireAdministrator() {
  * creating a brand-new Church OMS organisation.
  */
 export async function inviteUserWithRole(input: InviteUserWithRoleValues) {
-  const { supabase, churchId } = await requireAdministrator();
-  const branchId = input.branch_id ?? null;
+  const { supabase, churchId, isSuperAdmin } = await requireAdministrator();
+  const isInvitingSuperAdmin = input.role === "super_admin";
+
+  if (isInvitingSuperAdmin && !isSuperAdmin) {
+    throw new Error("Only a Super Admin can invite another Super Admin");
+  }
+
+  const branchId = isInvitingSuperAdmin ? null : input.branch_id ?? null;
 
   // Never trust a branch id supplied by the browser. If one was selected, it
   // must be an active branch belonging to the administrator's own church.
@@ -80,19 +90,41 @@ export async function inviteUserWithRole(input: InviteUserWithRoleValues) {
 
     if (profileError) throw profileError;
 
-    // Use the signed-in administrator client for role creation so the normal
-    // RLS policy still participates in authorization.
-    const { error: roleError } = await supabase.from("user_roles").insert({
-      user_id: invited.user.id,
-      role: input.role,
-      branch_id: branchId,
-      finance_permission: input.finance_permission,
-      finance_history_permission: input.finance_permission
-        ? input.finance_history_permission
-        : false,
-    });
+    if (isInvitingSuperAdmin) {
+      // Super Admin is always church-wide with full finance access. Keep an
+      // Administrator companion role for older server-side admin checks.
+      const { error: adminRoleError } = await supabase.from("user_roles").insert({
+        user_id: invited.user.id,
+        role: "administrator",
+        branch_id: null,
+        finance_permission: false,
+        finance_history_permission: false,
+      });
+      if (adminRoleError) throw adminRoleError;
 
-    if (roleError) throw roleError;
+      const { error: superRoleError } = await supabase.from("user_roles").insert({
+        user_id: invited.user.id,
+        role: "super_admin",
+        branch_id: null,
+        finance_permission: true,
+        finance_history_permission: true,
+      });
+      if (superRoleError) throw superRoleError;
+    } else {
+      // Use the signed-in administrator client for role creation so the normal
+      // RLS policy still participates in authorization.
+      const { error: roleError } = await supabase.from("user_roles").insert({
+        user_id: invited.user.id,
+        role: input.role,
+        branch_id: branchId,
+        finance_permission: input.finance_permission,
+        finance_history_permission: input.finance_permission
+          ? input.finance_history_permission
+          : false,
+      });
+
+      if (roleError) throw roleError;
+    }
   } catch (error) {
     // Avoid leaving behind a half-configured invited account if assigning its
     // church or role fails. The administrator can simply retry the invite.
