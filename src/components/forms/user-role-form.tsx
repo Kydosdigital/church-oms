@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { userRoleSchema, appRoleValues, type UserRoleValues } from "@/lib/validations/admin";
+import {
+  managedUserRoleSchema,
+  appRoleValues,
+  type ManagedUserRoleValues,
+} from "@/lib/validations/admin";
 import { assignManagedUserRole } from "@/lib/data/user-access";
 import { Button } from "@/components/ui/button";
 import { Label, FieldError } from "@/components/ui/input";
@@ -30,8 +34,8 @@ export function UserRoleForm({
     watch,
     setValue,
     formState: { errors },
-  } = useForm<UserRoleValues>({
-    resolver: zodResolver(userRoleSchema) as never,
+  } = useForm<ManagedUserRoleValues>({
+    resolver: zodResolver(managedUserRoleSchema) as never,
     defaultValues: { user_id: userId, role: "usher", finance_permission: false, finance_history_permission: true },
   });
 
@@ -50,7 +54,7 @@ export function UserRoleForm({
     }
   }, [isSuperAdminRole, setValue]);
 
-  async function onSubmit(data: UserRoleValues) {
+  async function onSubmit(data: ManagedUserRoleValues) {
     setPending(true);
     setError(null);
     try {
