@@ -150,14 +150,15 @@ export function LiveCounter({
           filter: `id=eq.${session.id}`,
         },
         (payload) => {
-          const rawSession = payload.new;
-          const nextSession: CounterSessionRow = {
-            ...rawSession,
-            status: rawSession.status === "closed" ? "closed" : "open",
-          };
-          setSession((current) =>
-            current ? { ...current, ...nextSession } : nextSession
-          );
+          const rawSession = payload.new as Partial<CounterSessionRow>;
+          setSession((current) => {
+            if (!current) return current;
+            return {
+              ...current,
+              ...rawSession,
+              status: rawSession.status === "closed" ? "closed" : "open",
+            };
+          });
         }
       )
       .subscribe();
@@ -262,20 +263,20 @@ export function LiveCounter({
     // Do not disable the large tap target while saving. Each adjustment is an
     // atomic database increment, so rapid taps from the same usher are safe.
     setPendingWrites((value) => value + 1);
-    void supabase
-      .rpc("increment_attendance_counter", {
-        p_session_id: session.id,
-        p_delta: delta,
-      })
-      .then(({ error: rpcError }) => {
+    void (async () => {
+      try {
+        const { error: rpcError } = await supabase.rpc("increment_attendance_counter", {
+          p_session_id: session.id,
+          p_delta: delta,
+        });
         if (rpcError) {
           setError(rpcError.message);
-          void refreshEntries(session.id);
+          await refreshEntries(session.id);
         }
-      })
-      .finally(() =>
-        setPendingWrites((value) => Math.max(0, value - 1))
-      );
+      } finally {
+        setPendingWrites((value) => Math.max(0, value - 1));
+      }
+    })();
   }
 
   async function submitCount() {
