@@ -56,6 +56,129 @@ export type Database = {
           },
         ]
       }
+      attendance_counter_entries: {
+        Row: {
+          count: number
+          created_at: string
+          id: string
+          session_id: string
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          id?: string
+          session_id: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          id?: string
+          session_id?: string
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_counter_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_counter_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_counter_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_counter_sessions: {
+        Row: {
+          branch_id: string
+          church_id: string
+          closed_at: string | null
+          closed_by: string | null
+          id: string
+          opened_at: string
+          opened_by: string
+          programme_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          church_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          id?: string
+          opened_at?: string
+          opened_by: string
+          programme_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          church_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          id?: string
+          opened_at?: string
+          opened_by?: string
+          programme_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_counter_sessions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_counter_sessions_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_counter_sessions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_counter_sessions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attendance_counter_sessions_programme_id_fkey"
+            columns: ["programme_id"]
+            isOneToOne: true
+            referencedRelation: "programme_occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance_records: {
         Row: {
           capacity_exception_note: string | null
@@ -389,6 +512,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_admins: {
+        Row: {
+          active: boolean
+          created_at: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       programme_guest_ministers: {
         Row: {
@@ -774,6 +921,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      close_attendance_counter: {
+        Args: { p_session_id: string }
+        Returns: number
+      }
       current_church_id: { Args: never; Returns: string }
       has_finance_history_permission: {
         Args: { p_branch_id?: string }
@@ -790,7 +941,34 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_attendance_counter: {
+        Args: { p_delta?: number; p_session_id: string }
+        Returns: number
+      }
       is_administrator: { Args: never; Returns: boolean }
+      is_platform_admin: { Args: never; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
+      open_attendance_counter: {
+        Args: { p_programme_id: string }
+        Returns: {
+          branch_id: string
+          church_id: string
+          closed_at: string | null
+          closed_by: string | null
+          id: string
+          opened_at: string
+          opened_by: string
+          programme_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "attendance_counter_sessions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       provision_new_church: {
         Args: { p_currency?: string; p_name: string; p_timezone?: string }
         Returns: string
@@ -848,6 +1026,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      resume_attendance_counter: {
+        Args: { p_session_id: string }
+        Returns: number
       }
       return_attendance: {
         Args: {
@@ -907,6 +1089,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      set_church_user_active: {
+        Args: { p_active: boolean; p_user_id: string }
+        Returns: undefined
+      }
       submit_attendance: {
         Args: { p_expected_version: number; p_programme_id: string }
         Returns: {
@@ -936,6 +1122,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_attendance_counter: {
+        Args: { p_session_id: string }
+        Returns: number
       }
       submit_finance: {
         Args: { p_programme_id: string }
@@ -1028,6 +1218,7 @@ export type Database = {
         | "finance_verifier"
         | "pastor"
         | "administrator"
+        | "super_admin"
       offering_category_type: "general" | "project" | "special"
       payment_channel: "physical" | "online"
       programme_classification: "routine" | "special_event"
@@ -1167,6 +1358,7 @@ export const Constants = {
         "finance_verifier",
         "pastor",
         "administrator",
+        "super_admin",
       ],
       offering_category_type: ["general", "project", "special"],
       payment_channel: ["physical", "online"],
