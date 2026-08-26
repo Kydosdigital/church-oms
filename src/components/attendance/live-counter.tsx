@@ -35,7 +35,7 @@ export function LiveCounter({
   canReview,
   canClose,
 }: LiveCounterProps) {
-  const supabase = useMemo(() => createClient() as any, []);
+  const supabase = useMemo(() => createClient(), []);
   const [session, setSession] = useState<CounterSessionRow | null>(initialSession);
   const [entries, setEntries] = useState<CounterEntryRow[]>(initialEntries);
   const [error, setError] = useState<string | null>(null);
@@ -67,14 +67,25 @@ export function LiveCounter({
           table: "attendance_counter_entries",
           filter: `session_id=eq.${session.id}`,
         },
-        (payload: any) => {
+        (payload) => {
           if (payload.eventType === "DELETE") {
             const oldId = payload.old?.id;
             setEntries((current) => current.filter((entry) => entry.id !== oldId));
             return;
           }
 
-          const row = payload.new as Omit<CounterEntryRow, "user_name">;
+          const rawRow = payload.new;
+          const row: Omit<CounterEntryRow, "user_name"> = {
+            id: rawRow.id,
+            session_id: rawRow.session_id,
+            user_id: rawRow.user_id,
+            count: rawRow.count,
+            status: rawRow.status === "submitted" ? "submitted" : "counting",
+            submitted_at: rawRow.submitted_at,
+            created_at: rawRow.created_at,
+            updated_at: rawRow.updated_at,
+          };
+
           setEntries((current) => {
             // Match by user as well as id so the first database INSERT replaces
             // the temporary optimistic row instead of double-counting it.
@@ -117,7 +128,7 @@ export function LiveCounter({
               .select("full_name")
               .eq("id", row.user_id)
               .maybeSingle()
-              .then(({ data }: any) => {
+              .then(({ data }) => {
                 if (!data?.full_name) return;
                 setEntries((current) =>
                   current.map((entry) =>
@@ -138,9 +149,14 @@ export function LiveCounter({
           table: "attendance_counter_sessions",
           filter: `id=eq.${session.id}`,
         },
-        (payload: any) => {
+        (payload) => {
+          const rawSession = payload.new;
+          const nextSession: CounterSessionRow = {
+            ...rawSession,
+            status: rawSession.status === "closed" ? "closed" : "open",
+          };
           setSession((current) =>
-            current ? { ...current, ...payload.new } : payload.new
+            current ? { ...current, ...nextSession } : nextSession
           );
         }
       )
@@ -167,8 +183,9 @@ export function LiveCounter({
 
     setEntries((current) => {
       const names = new Map(current.map((entry) => [entry.user_id, entry.user_name]));
-      return (data ?? []).map((entry: any) => ({
+      return (data ?? []).map((entry) => ({
         ...entry,
+        status: entry.status === "submitted" ? ("submitted" as const) : ("counting" as const),
         user_name:
           entry.user_id === currentUserId
             ? currentUserName
@@ -195,7 +212,10 @@ export function LiveCounter({
       return;
     }
 
-    const nextSession = data as CounterSessionRow;
+    const nextSession: CounterSessionRow = {
+      ...data,
+      status: data.status === "closed" ? "closed" : "open",
+    };
     setSession(nextSession);
     await refreshEntries(nextSession.id);
     setNotice(wasExisting ? "Live counter reopened." : "Live counter started.");
@@ -247,7 +267,7 @@ export function LiveCounter({
         p_session_id: session.id,
         p_delta: delta,
       })
-      .then(({ error: rpcError }: any) => {
+      .then(({ error: rpcError }) => {
         if (rpcError) {
           setError(rpcError.message);
           void refreshEntries(session.id);
