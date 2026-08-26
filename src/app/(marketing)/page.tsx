@@ -12,7 +12,11 @@ const description =
   "required to verify before anything is final. Dashboards, exports and a full audit trail included.";
 
 export const metadata: Metadata = {
-  title,
+  // `absolute` so the root layout's "%s · <app name>" template doesn't append
+  // the app name here. This title already carries the product category, and
+  // with a long NEXT_PUBLIC_APP_NAME the templated version ran past 70
+  // characters and repeated the word "software".
+  title: { absolute: title },
   description,
   alternates: { canonical: "/" },
   openGraph: { title, description, url: "/" },

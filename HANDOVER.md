@@ -152,35 +152,31 @@ no color changes were needed.
   is no manual toggle. This is intentional per `docs/PRODUCT.md`'s
   "deliberately out of scope" list, not an oversight.
 
-## 8. Security note — rotate the service-role key
+## 8. Security note — service-role key (rotated)
 
-Earlier in this project's history, the Supabase **service_role** JWT for
-this project was pasted into a chat conversation by mistake. It was not
-stored or used beyond the single git-push it was needed for at the time,
-but because it appeared in plaintext in a conversation, **it should be
-treated as compromised**. If this hasn't been done yet:
+Earlier in this project's history, the Supabase **service_role** JWT was
+pasted into a chat conversation by mistake. **It has since been rotated**,
+so the exposed value is dead.
 
-1. Supabase dashboard → Project Settings → API → regenerate the
-   `service_role` key.
-2. Update `SUPABASE_SERVICE_ROLE_KEY` in Vercel's environment variables to
-   the new value.
-3. Redeploy.
+Worth knowing for the future: that key bypasses Row-Level Security
+entirely. It should never be pasted into a chat, printed to a terminal,
+committed, or given a `NEXT_PUBLIC_` prefix. The only places it belongs are
+Vercel's environment variables and a local `.env.local`.
+
+If invite-by-email ever fails with an auth error, the likely cause is
+`SUPABASE_SERVICE_ROLE_KEY` in Vercel still holding a pre-rotation value.
 
 ## 9. Outstanding / not yet done
 
 These are the real open items — nothing here is secretly finished:
 
-- **Supabase Auth redirect URL** — Supabase's Auth "Site URL" is still
-  defaulted to `http://localhost:3000`, so confirmation/reset emails
-  currently link to localhost instead of the deployed app. This needs to
-  be fixed in the Supabase dashboard (Authentication → URL Configuration):
-  set **Site URL** to `https://church-oms.vercel.app` and add
-  `https://church-oms.vercel.app/**` to **Redirect URLs** (keep the
-  localhost one too if local dev auth flows matter to you). This is a
-  dashboard-only setting — there's no migration/CLI path for it. **This
-  was flagged to the user but not confirmed as fixed at handover time.**
-- **Service-role key rotation** — see section 8; not confirmed done at
-  handover time.
+- ~~**Supabase Auth redirect URL**~~ — DONE. Site URL and redirect URLs
+  were pointed at the deployed app, so auth emails no longer link to
+  localhost.
+- ~~**Service-role key rotation**~~ — DONE (see section 8). If invite-by-email
+  ever starts failing, check that `SUPABASE_SERVICE_ROLE_KEY` in Vercel
+  matches the rotated key — that is the one place the old value could
+  linger.
 - **Marketing website** — now BUILT (the blocking question was answered:
   it is positioned as SaaS sold to many churches). Five pages under
   `src/app/(marketing)/` plus the legal pages. Two things still need real
