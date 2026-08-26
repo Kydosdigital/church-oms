@@ -1,38 +1,25 @@
 import { createClient } from "@/lib/supabase/server";
+import type { Tables } from "@/types/database";
 
-export interface CounterSessionRow {
-  id: string;
-  programme_id: string;
-  church_id: string;
-  branch_id: string;
+type CounterSessionDbRow = Tables<"attendance_counter_sessions">;
+type CounterEntryDbRow = Tables<"attendance_counter_entries">;
+
+export type CounterSessionRow = Omit<CounterSessionDbRow, "status"> & {
   status: "open" | "closed";
-  opened_by: string;
-  opened_at: string;
-  closed_by: string | null;
-  closed_at: string | null;
-  updated_at: string;
-}
+};
 
-export interface CounterEntryRow {
-  id: string;
-  session_id: string;
-  user_id: string;
-  count: number;
+export type CounterEntryRow = Omit<CounterEntryDbRow, "status"> & {
   status: "counting" | "submitted";
-  submitted_at: string | null;
-  created_at: string;
-  updated_at: string;
   user_name: string;
-}
+};
 
 export async function getLiveCounterForProgramme(programmeId: string): Promise<{
   session: CounterSessionRow | null;
   entries: CounterEntryRow[];
 }> {
   const supabase = await createClient();
-  const db = supabase as any;
 
-  const { data: session, error: sessionError } = await db
+  const { data: session, error: sessionError } = await supabase
     .from("attendance_counter_sessions")
     .select("*")
     .eq("programme_id", programmeId)
@@ -41,7 +28,7 @@ export async function getLiveCounterForProgramme(programmeId: string): Promise<{
   if (sessionError) throw sessionError;
   if (!session) return { session: null, entries: [] };
 
-  const { data: entries, error: entriesError } = await db
+  const { data: entries, error: entriesError } = await supabase
     .from("attendance_counter_entries")
     .select("id, session_id, user_id, count, status, submitted_at, created_at, updated_at")
     .eq("session_id", session.id)
@@ -49,7 +36,10 @@ export async function getLiveCounterForProgramme(programmeId: string): Promise<{
 
   if (entriesError) throw entriesError;
 
-  const rawEntries = (entries ?? []) as Omit<CounterEntryRow, "user_name">[];
+  const rawEntries = (entries ?? []).map((entry) => ({
+    ...entry,
+    status: entry.status === "submitted" ? ("submitted" as const) : ("counting" as const),
+  }));
   const userIds = Array.from(new Set(rawEntries.map((entry) => entry.user_id)));
 
   let userNames = new Map<string, string>();
@@ -62,7 +52,10 @@ export async function getLiveCounterForProgramme(programmeId: string): Promise<{
   }
 
   return {
-    session: session as CounterSessionRow,
+    session: {
+      ...session,
+      status: session.status === "closed" ? "closed" : "open",
+    },
     entries: rawEntries.map((entry) => ({
       ...entry,
       user_name: userNames.get(entry.user_id) ?? "Usher",
