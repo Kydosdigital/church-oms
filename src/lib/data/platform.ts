@@ -53,9 +53,7 @@ export async function getPlatformAdminContext(): Promise<PlatformAdminContext | 
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Generated DB types intentionally lag additive migrations until the next
-  // schema regeneration. Keep the escape hatch local to this new table.
-  const { data } = await (supabase as any)
+  const { data } = await supabase
     .from("platform_admins")
     .select("role, active")
     .eq("user_id", user.id)
@@ -63,7 +61,11 @@ export async function getPlatformAdminContext(): Promise<PlatformAdminContext | 
     .maybeSingle();
 
   if (!data) return null;
-  return { userId: user.id, role: data.role as PlatformAdminContext["role"] };
+  if (data.role !== "owner" && data.role !== "admin" && data.role !== "support") {
+    return null;
+  }
+
+  return { userId: user.id, role: data.role };
 }
 
 export async function getPlatformDashboardData(): Promise<PlatformDashboardData | null> {
@@ -73,7 +75,7 @@ export async function getPlatformDashboardData(): Promise<PlatformDashboardData 
   // Never expose the service-role client to a Client Component. All cross-
   // tenant aggregation stays on the server after platform membership is
   // verified above.
-  const admin = createAdminClient() as any;
+  const admin = createAdminClient();
 
   const [churchResult, userResult, branchResult, programmeResult, roleResult] = await Promise.all([
     admin
@@ -93,27 +95,13 @@ export async function getPlatformDashboardData(): Promise<PlatformDashboardData 
     if (result.error) throw result.error;
   }
 
-  const churches = (churchResult.data ?? []) as {
-    id: string;
-    name: string;
-    currency_code: string;
-    timezone: string;
-    created_at: string;
-  }[];
-  const users = (userResult.data ?? []) as {
-    id: string;
-    church_id: string | null;
-    full_name: string;
-    email: string;
-    active: boolean;
-    created_at: string;
-  }[];
-  const branches = (branchResult.data ?? []) as { id: string; church_id: string; active: boolean }[];
-  const programmes = (programmeResult.data ?? []) as { id: string; church_id: string; created_at: string }[];
-  const roles = (roleResult.data ?? []) as { user_id: string; role: string }[];
+  const churches = churchResult.data ?? [];
+  const users = userResult.data ?? [];
+  const branches = branchResult.data ?? [];
+  const programmes = programmeResult.data ?? [];
+  const roles = roleResult.data ?? [];
 
   const churchNameById = new Map(churches.map((church) => [church.id, church.name]));
-  const userById = new Map(users.map((user) => [user.id, user]));
   const superAdminIds = new Set(
     roles.filter((assignment) => assignment.role === "super_admin").map((assignment) => assignment.user_id)
   );
@@ -140,10 +128,6 @@ export async function getPlatformDashboardData(): Promise<PlatformDashboardData 
     ...user,
     church_name: user.church_id ? churchNameById.get(user.church_id) ?? null : null,
   }));
-
-  // Touch the map so TypeScript catches user id shape drift in one place if
-  // the generated schema changes later.
-  void userById;
 
   return {
     totals: {
