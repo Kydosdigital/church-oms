@@ -16,7 +16,12 @@ export async function signIn(_prevState: AuthActionState, formData: FormData): P
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: error.message };
+    const isInvalidCredentials = error.message.toLowerCase().includes("invalid login credentials");
+    return {
+      error: isInvalidCredentials
+        ? "Email or password is incorrect. If you recently confirmed your email, use Forgot password to set a new password."
+        : error.message,
+    };
   }
 
   redirect("/dashboard");
@@ -27,21 +32,30 @@ export async function signUp(_prevState: AuthActionState, formData: FormData): P
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("full_name") ?? "");
 
+  const origin = (await headers()).get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const emailRedirectTo = origin
+    ? `${origin}/auth/confirm?next=/onboarding`
+    : undefined;
+
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: {
+      data: { full_name: fullName },
+      ...(emailRedirectTo ? { emailRedirectTo } : {}),
+    },
   });
 
   if (error) {
     return { error: error.message };
   }
 
-  // New sign-ups have no church/role yet — an administrator must invite
-  // them into a church and assign roles (section 4.6). Route to a holding
-  // screen rather than the dashboard.
-  redirect("/login?awaiting_setup=1");
+  // Public signup is the church-owner path. After email confirmation, the
+  // callback establishes a session and sends the new owner to onboarding to
+  // register their church. Staff joining an existing church should use the
+  // invitation issued by that church's Administrator/Super Admin instead.
+  redirect("/login");
 }
 
 export async function signOut() {
