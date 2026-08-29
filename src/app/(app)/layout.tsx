@@ -25,6 +25,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/login?awaiting_setup=1");
   }
 
+  // Database authorization helpers already treat active=false as immediate loss
+  // of tenant/role authority. Mirror that at the app-shell boundary so a
+  // deactivated person does not see navigation or confusing empty screens while
+  // their Supabase Auth session is still valid.
+  if (!ctx.user.active) {
+    redirect("/account-inactive");
+  }
+
   // A freshly signed-up user has an app_users row (via the on_auth_user_created
   // trigger) but no church yet — send them to set one up before anything else
   // in the app (which assumes a church_id everywhere) can render sensibly.
