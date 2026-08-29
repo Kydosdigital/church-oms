@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { toCsv } from "@/lib/csv";
 import { toXlsx } from "@/lib/xlsx";
 import { getCurrentUserContext } from "@/lib/data/current-user";
+import { canAccessReports } from "@/lib/route-access";
 import { parseReportExportRange } from "@/lib/report-export-range";
 
 interface AttendanceExportRow {
@@ -33,6 +34,9 @@ export async function GET(request: NextRequest) {
   const ctx = await getCurrentUserContext();
   if (!ctx) {
     return new Response("Unauthorized", { status: 401 });
+  }
+  if (!ctx.user.active || !canAccessReports(ctx)) {
+    return new Response("Reports permission required", { status: 403 });
   }
 
   const { range, error: rangeError } = parseReportExportRange(
