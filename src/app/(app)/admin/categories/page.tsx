@@ -2,18 +2,21 @@ import {
   getVerifiedRevenueTotalsByCategory,
   listAllCategories,
 } from "@/lib/data/revenue";
+import { listServiceTypesAll } from "@/lib/data/admin";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { CategoryForm } from "@/components/forms/category-form";
 import { CategoryListItem } from "@/components/forms/category-list-item";
 
 export default async function CategoriesAdminPage() {
-  const [categories, ctx] = await Promise.all([
+  const [categories, serviceTypes, ctx] = await Promise.all([
     listAllCategories(),
+    listServiceTypesAll(),
     getCurrentUserContext(),
   ]);
   const activeCategories = categories.filter((category) => category.active);
   const inactiveCategories = categories.filter((category) => !category.active);
+  const activeServiceTypes = serviceTypes.filter((serviceType) => serviceType.active);
   const supabase = await createClient();
   const canViewProjectProgress =
     ctx?.permissions.hasFinanceHistoryPermission() ?? false;
@@ -42,13 +45,15 @@ export default async function CategoriesAdminPage() {
         </p>
       </div>
 
-      <CategoryForm />
+      <CategoryForm serviceTypes={activeServiceTypes} />
 
       <section className="space-y-2">
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="font-semibold">Active categories</h2>
-            <p className="text-xs text-muted">These appear when entering offerings for a programme.</p>
+            <p className="text-xs text-muted">
+              These appear when entering offerings for an applicable programme.
+            </p>
           </div>
           <span className="text-xs text-muted">{activeCategories.length} active</span>
         </div>
@@ -92,8 +97,8 @@ export default async function CategoriesAdminPage() {
                 currencyCode={currencyCode}
                 localeCode={localeCode}
                 cumulativeReceived={
-                canViewProjectProgress ? cumulativeByCategory[category.id] ?? 0 : undefined
-              }
+                  canViewProjectProgress ? cumulativeByCategory[category.id] ?? 0 : undefined
+                }
               />
             ))}
           </div>
