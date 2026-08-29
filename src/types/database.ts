@@ -110,11 +110,16 @@ export type Database = {
           church_id: string
           closed_at: string | null
           closed_by: string | null
+          counter_count: number
+          counting_count: number
           id: string
+          live_total: number
           opened_at: string
           opened_by: string
           programme_id: string
           status: string
+          submitted_count: number
+          submitted_total: number
           updated_at: string
         }
         Insert: {
@@ -122,11 +127,16 @@ export type Database = {
           church_id: string
           closed_at?: string | null
           closed_by?: string | null
+          counter_count?: number
+          counting_count?: number
           id?: string
+          live_total?: number
           opened_at?: string
           opened_by: string
           programme_id: string
           status?: string
+          submitted_count?: number
+          submitted_total?: number
           updated_at?: string
         }
         Update: {
@@ -134,11 +144,16 @@ export type Database = {
           church_id?: string
           closed_at?: string | null
           closed_by?: string | null
+          counter_count?: number
+          counting_count?: number
           id?: string
+          live_total?: number
           opened_at?: string
           opened_by?: string
           programme_id?: string
           status?: string
+          submitted_count?: number
+          submitted_total?: number
           updated_at?: string
         }
         Relationships: [
@@ -970,11 +985,16 @@ export type Database = {
           church_id: string
           closed_at: string | null
           closed_by: string | null
+          counter_count: number
+          counting_count: number
           id: string
+          live_total: number
           opened_at: string
           opened_by: string
           programme_id: string
           status: string
+          submitted_count: number
+          submitted_total: number
           updated_at: string
         }
         SetofOptions: {
@@ -987,6 +1007,10 @@ export type Database = {
       provision_new_church: {
         Args: { p_currency?: string; p_name: string; p_timezone?: string }
         Returns: string
+      }
+      recompute_attendance_counter_session: {
+        Args: { p_session_id: string }
+        Returns: undefined
       }
       reopen_attendance: {
         Args: { p_programme_id: string; p_reason: string }
