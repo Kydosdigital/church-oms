@@ -1,28 +1,28 @@
-import { listAllCategories } from "@/lib/data/revenue";
+import {
+  getVerifiedRevenueTotalsByCategory,
+  listAllCategories,
+} from "@/lib/data/revenue";
+import { getCurrentUserContext } from "@/lib/data/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { CategoryForm } from "@/components/forms/category-form";
 import { CategoryListItem } from "@/components/forms/category-list-item";
 
 export default async function CategoriesAdminPage() {
-  const categories = await listAllCategories();
+  const [categories, ctx] = await Promise.all([
+    listAllCategories(),
+    getCurrentUserContext(),
+  ]);
   const activeCategories = categories.filter((category) => category.active);
   const inactiveCategories = categories.filter((category) => !category.active);
   const supabase = await createClient();
-
-  const cumulativeByCategory: Record<string, number> = {};
-  for (const category of categories) {
-    if (category.category_type !== "project") continue;
-    const { data: entries } = await supabase
-      .from("revenue_entries")
-      .select("category_total")
-      .eq("category_id", category.id)
-      .eq("state", "verified");
-    cumulativeByCategory[category.id] = (entries ?? []).reduce(
-      (sum: number, entry: { category_total: number | null }) =>
-        sum + Number(entry.category_total ?? 0),
-      0
-    );
-  }
+  const canViewProjectProgress =
+    ctx?.permissions.hasFinanceHistoryPermission() ?? false;
+  const projectCategoryIds = categories
+    .filter((category) => category.category_type === "project")
+    .map((category) => category.id);
+  const cumulativeByCategory = canViewProjectProgress
+    ? await getVerifiedRevenueTotalsByCategory(projectCategoryIds)
+    : {};
 
   const { data: churchRow } = await supabase
     .from("churches")
@@ -65,7 +65,9 @@ export default async function CategoriesAdminPage() {
               category={category}
               currencyCode={currencyCode}
               localeCode={localeCode}
-              cumulativeReceived={cumulativeByCategory[category.id]}
+              cumulativeReceived={
+                canViewProjectProgress ? cumulativeByCategory[category.id] ?? 0 : undefined
+              }
             />
           ))}
         </div>
@@ -89,7 +91,9 @@ export default async function CategoriesAdminPage() {
                 category={category}
                 currencyCode={currencyCode}
                 localeCode={localeCode}
-                cumulativeReceived={cumulativeByCategory[category.id]}
+                cumulativeReceived={
+                canViewProjectProgress ? cumulativeByCategory[category.id] ?? 0 : undefined
+              }
               />
             ))}
           </div>
