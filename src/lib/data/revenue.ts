@@ -24,6 +24,32 @@ export async function getRevenueForProgramme(programmeId: string): Promise<Reven
   return (data ?? []) as RevenueEntry[];
 }
 
+/** Returns verified historical revenue totals for the requested categories in
+ * one RLS-bound query. Callers should only request this when the current user
+ * has finance-history permission; the database remains the final authority. */
+export async function getVerifiedRevenueTotalsByCategory(
+  categoryIds: string[]
+): Promise<Record<string, number>> {
+  if (categoryIds.length === 0) return {};
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("revenue_entries")
+    .select("category_id, category_total")
+    .in("category_id", categoryIds)
+    .eq("state", "verified");
+
+  if (error) throw error;
+
+  const totals: Record<string, number> = {};
+  for (const entry of data ?? []) {
+    totals[entry.category_id] =
+      (totals[entry.category_id] ?? 0) + Number(entry.category_total ?? 0);
+  }
+
+  return totals;
+}
+
 export interface RevenueEntryInput {
   category_id: string;
   physical_amount: number;
