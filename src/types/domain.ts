@@ -29,6 +29,7 @@ export interface Church {
   name: string;
   currency_code: string;
   timezone: string;
+  locale_code: string;
   reporting_year_start_month: number;
   finance_requires_independent_verification: boolean;
 }
