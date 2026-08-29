@@ -46,10 +46,14 @@ export function LiveCounter({
   const [closing, setClosing] = useState(false);
 
   const ownEntry = entries.find((entry) => entry.user_id === currentUserId);
-  const liveTotal = entries.reduce((sum, entry) => sum + entry.count, 0);
-  const submittedEntries = entries.filter((entry) => entry.status === "submitted");
-  const submittedTotal = submittedEntries.reduce((sum, entry) => sum + entry.count, 0);
-  const countingEntries = entries.filter((entry) => entry.status === "counting");
+  // Aggregate totals live on the session row so an ordinary Usher can see the
+  // combined service count without SELECT access to every other Usher's
+  // individual entry. Reviewers still receive the detailed rows through RLS.
+  const liveTotal = session?.live_total ?? 0;
+  const submittedTotal = session?.submitted_total ?? 0;
+  const counterCount = session?.counter_count ?? 0;
+  const countingCount = session?.counting_count ?? 0;
+  const submittedCount = session?.submitted_count ?? 0;
   const difference = submittedTotal - recordedAttendanceTotal;
   const sessionOpen = session?.status === "open";
   const ownSubmitted = ownEntry?.status === "submitted";
@@ -337,7 +341,7 @@ export function LiveCounter({
   }
 
   async function closeCounter() {
-    if (!session || !canClose || countingEntries.length > 0) return;
+    if (!session || !canClose || countingCount > 0) return;
     setClosing(true);
     setError(null);
 
@@ -509,13 +513,18 @@ export function LiveCounter({
                 </div>
                 <div className="rounded-brand bg-surface-border/30 p-3">
                   <p className="text-xs text-muted">Ushers</p>
-                  <p className="mt-1 text-xl font-semibold">{entries.length}</p>
+                  <p className="mt-1 text-xl font-semibold">{counterCount}</p>
                 </div>
               </div>
               <p className="mt-3 text-xs text-muted">
-                {submittedEntries.length} submitted · {countingEntries.length} still
-                counting
+                {submittedCount} submitted · {countingCount} still counting
               </p>
+              {!canReview && (
+                <p className="mt-2 text-xs text-muted">
+                  Individual usher counts stay private. You can see your own count
+                  and the combined service total.
+                </p>
+              )}
             </Card>
 
             <Card>
@@ -566,8 +575,8 @@ export function LiveCounter({
                 onClick={closeCounter}
                 disabled={
                   closing ||
-                  submittedEntries.length === 0 ||
-                  countingEntries.length > 0
+                  submittedCount === 0 ||
+                  countingCount > 0
                 }
               >
                 {closing ? "Closing…" : "Close counter"}
@@ -575,10 +584,10 @@ export function LiveCounter({
             )}
           </div>
 
-          {canClose && sessionOpen && countingEntries.length > 0 && (
+          {canClose && sessionOpen && countingCount > 0 && (
             <p className="mt-3 text-xs text-warning">
-              {countingEntries.length} usher counter(s) still need to submit before
-              this service can be closed.
+              {countingCount} usher counter(s) still need to submit before this
+              service can be closed.
             </p>
           )}
 
