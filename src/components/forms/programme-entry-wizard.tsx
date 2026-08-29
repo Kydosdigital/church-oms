@@ -12,7 +12,11 @@ import {
   outcomesExceedAttendance,
   formatPercent,
 } from "@/lib/calculations";
-import { createDraftProgramme, submitAttendanceAction, checkDuplicateService } from "@/lib/data/programmes";
+import {
+  createAndSubmitProgramme,
+  createDraftProgramme,
+  checkDuplicateService,
+} from "@/lib/data/programmes";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea, FieldError } from "@/components/ui/input";
 import { NumberField } from "@/components/ui/input";
@@ -148,8 +152,7 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
     setServerError(null);
     setSubmitting(true);
     try {
-      const programme = await createDraftProgramme(data);
-      await submitAttendanceAction(programme.id, programme.version);
+      const programme = await createAndSubmitProgramme(data);
       router.push(`/programmes/${programme.id}`);
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Something went wrong");
