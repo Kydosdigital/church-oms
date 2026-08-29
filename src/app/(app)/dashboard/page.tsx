@@ -45,18 +45,18 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const currencyCode = church?.currency_code ?? "GBP";
   const localeCode = church?.locale_code ?? "en-GB";
 
-  const [attendance, pending, projects] = await Promise.all([
-    getAttendanceTrend(range),
-    getPendingApprovals(),
-    getProjectProgress(),
-  ]);
-
   // hasFinancePermission gates entering/reviewing a service's own offering;
   // hasFinanceHistoryPermission additionally gates dashboards/trends/exports
-  // (section: "view past financial records" permission) — a treasurer can
-  // have the former without the latter.
+  // (section: "view past financial records" permission). Do not even request
+  // historical project totals unless that stronger permission is present.
   const canSeeFinanceHistory = ctx?.permissions.hasFinanceHistoryPermission() ?? false;
-  const revenue = canSeeFinanceHistory ? await getRevenueTrend(range) : [];
+
+  const [attendance, pending, projects, revenue] = await Promise.all([
+    getAttendanceTrend(range),
+    getPendingApprovals(),
+    canSeeFinanceHistory ? getProjectProgress() : Promise.resolve([]),
+    canSeeFinanceHistory ? getRevenueTrend(range) : Promise.resolve([]),
+  ]);
 
   const totalPhysical = revenue.reduce((sum, row) => sum + row.physical_amount, 0);
   const totalOnline = revenue.reduce((sum, row) => sum + row.online_amount, 0);

@@ -38,7 +38,10 @@ export function CategoryListItem({
     }
   }
 
-  const progress = project ? projectProgressPercent(cumulativeReceived ?? 0, project.target_amount) : null;
+  const progress =
+    project && cumulativeReceived !== undefined
+      ? projectProgressPercent(cumulativeReceived, project.target_amount)
+      : null;
 
   return (
     <div className="p-4 flex flex-wrap items-center justify-between gap-4">
@@ -53,9 +56,17 @@ export function CategoryListItem({
         {project && (
           <p className="text-xs text-muted mt-1">
             {project.target_amount ? (
-              <>
-                Target {formatCurrency(project.target_amount, currencyCode, localeCode)} · {formatPercent(progress)} achieved
-              </>
+              cumulativeReceived === undefined ? (
+                <>
+                  Target {formatCurrency(project.target_amount, currencyCode, localeCode)} ·
+                  progress hidden without finance-history access
+                </>
+              ) : (
+                <>
+                  Target {formatCurrency(project.target_amount, currencyCode, localeCode)} ·{" "}
+                  {formatPercent(progress)} achieved
+                </>
+              )
             ) : (
               "No target set"
             )}

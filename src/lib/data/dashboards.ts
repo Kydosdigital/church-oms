@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { projectProgressPercent } from "@/lib/calculations";
+import { getVerifiedRevenueTotalsByCategory } from "@/lib/data/revenue";
 
 export interface DateRange {
   from: string; // ISO date
@@ -130,30 +131,23 @@ export async function getProjectProgress(): Promise<ProjectProgressSummary[]> {
     fundraising_projects: { target_amount: number | null }[];
   }
 
-  const results: ProjectProgressSummary[] = [];
-  for (const cat of categories as unknown as ProjectCategoryRow[]) {
-    const { data: entries } = await supabase
-      .from("revenue_entries")
-      .select("category_total")
-      .eq("category_id", cat.id)
-      .eq("state", "verified");
+  const projectCategories = categories as unknown as ProjectCategoryRow[];
+  const totalsByCategory = await getVerifiedRevenueTotalsByCategory(
+    projectCategories.map((category) => category.id)
+  );
 
-    const cumulative = (entries ?? []).reduce(
-      (sum: number, e: { category_total: number | null }) => sum + Number(e.category_total ?? 0),
-      0
-    );
-    const target = cat.fundraising_projects?.[0]?.target_amount ?? null;
+  return projectCategories.map((category) => {
+    const cumulative = totalsByCategory[category.id] ?? 0;
+    const target = category.fundraising_projects?.[0]?.target_amount ?? null;
 
-    results.push({
-      category_id: cat.id,
-      name: cat.name,
+    return {
+      category_id: category.id,
+      name: category.name,
       target_amount: target,
       cumulative_received: cumulative,
       percent_achieved: projectProgressPercent(cumulative, target),
-    });
-  }
-
-  return results;
+    };
+  });
 }
 
 export interface PendingApprovalSummary {
