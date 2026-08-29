@@ -11,6 +11,7 @@ describe("church timezone validation", () => {
         name: "Grace Church",
         currency_code: "GBP",
         timezone: "Europe/London",
+        locale_code: "en-GB",
         reporting_year_start_month: 1,
         finance_requires_independent_verification: true,
       }).success
@@ -21,6 +22,7 @@ describe("church timezone validation", () => {
         name: "Grace Church",
         currency: "NGN",
         timezone: "Africa/Lagos",
+        locale: "en-NG",
       }).success
     ).toBe(true);
   });
@@ -31,6 +33,7 @@ describe("church timezone validation", () => {
         name: "Grace Church",
         currency_code: "GBP",
         timezone: "London",
+        locale_code: "en-GB",
         reporting_year_start_month: 1,
         finance_requires_independent_verification: true,
       }).success
