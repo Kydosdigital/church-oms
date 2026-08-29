@@ -100,6 +100,9 @@ export interface ProgrammeOccurrence {
   notes: string | null;
   state: RecordState;
   version: number;
+  /** Programme-level finance workflow header for the set of revenue entries. */
+  finance_state: RecordState;
+  finance_version: number;
   duplicate_override: boolean;
   duplicate_override_reason: string | null;
   created_by: string;

@@ -40,52 +40,109 @@ export async function saveRevenueEntries(programmeId: string, entries: RevenueEn
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const rows = entries
-    .filter((e) => e.physical_amount > 0 || e.online_amount > 0 || e.notes)
-    .map((e) => ({
-      programme_id: programmeId,
-      category_id: e.category_id,
-      physical_amount: e.physical_amount,
-      online_amount: e.online_amount,
-      notes: e.notes || null,
-      created_by: user.id,
-      updated_by: user.id,
-    }));
+  for (const entry of entries) {
+    if (
+      !Number.isFinite(entry.physical_amount) ||
+      !Number.isFinite(entry.online_amount) ||
+      entry.physical_amount < 0 ||
+      entry.online_amount < 0
+    ) {
+      throw new Error("Offering amounts must be valid non-negative numbers");
+    }
+  }
 
-  if (rows.length === 0) return;
+  const populated = entries.filter(
+    (entry) =>
+      entry.physical_amount > 0 ||
+      entry.online_amount > 0 ||
+      Boolean(entry.notes?.trim())
+  );
+  const clearedCategoryIds = entries
+    .filter(
+      (entry) =>
+        entry.physical_amount === 0 &&
+        entry.online_amount === 0 &&
+        !entry.notes?.trim()
+    )
+    .map((entry) => entry.category_id);
 
-  const { error } = await supabase
-    .from("revenue_entries")
-    .upsert(rows, { onConflict: "programme_id,category_id" });
-  if (error) throw error;
+  if (populated.length > 0) {
+    const { error } = await supabase.from("revenue_entries").upsert(
+      populated.map((entry) => ({
+        programme_id: programmeId,
+        category_id: entry.category_id,
+        physical_amount: entry.physical_amount,
+        online_amount: entry.online_amount,
+        notes: entry.notes?.trim() || null,
+        created_by: user.id,
+        updated_by: user.id,
+      })),
+      { onConflict: "programme_id,category_id" }
+    );
+    if (error) throw error;
+  }
+
+  // Clearing an existing category back to zero should really clear it. The old
+  // filter-only implementation skipped zero values, which could leave a stale
+  // previously-entered amount in the database.
+  if (clearedCategoryIds.length > 0) {
+    const { error } = await supabase
+      .from("revenue_entries")
+      .delete()
+      .eq("programme_id", programmeId)
+      .in("category_id", clearedCategoryIds);
+    if (error) throw error;
+  }
 
   revalidatePath(`/revenue/${programmeId}`);
 }
 
-export async function submitFinanceAction(programmeId: string) {
+export async function submitFinanceAction(programmeId: string, expectedVersion: number) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("submit_finance", { p_programme_id: programmeId });
+  const { error } = await supabase.rpc("submit_finance", {
+    p_programme_id: programmeId,
+    p_expected_version: expectedVersion,
+  });
   if (error) throw error;
   revalidatePath(`/revenue/${programmeId}`);
 }
 
-export async function verifyFinanceAction(programmeId: string) {
+export async function verifyFinanceAction(programmeId: string, expectedVersion: number) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("verify_finance", { p_programme_id: programmeId });
+  const { error } = await supabase.rpc("verify_finance", {
+    p_programme_id: programmeId,
+    p_expected_version: expectedVersion,
+  });
   if (error) throw error;
   revalidatePath(`/revenue/${programmeId}`);
 }
 
-export async function returnFinanceAction(programmeId: string, reason: string) {
+export async function returnFinanceAction(
+  programmeId: string,
+  expectedVersion: number,
+  reason: string
+) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("return_finance", { p_programme_id: programmeId, p_reason: reason });
+  const { error } = await supabase.rpc("return_finance", {
+    p_programme_id: programmeId,
+    p_expected_version: expectedVersion,
+    p_reason: reason,
+  });
   if (error) throw error;
   revalidatePath(`/revenue/${programmeId}`);
 }
 
-export async function reopenFinanceAction(programmeId: string, reason: string) {
+export async function reopenFinanceAction(
+  programmeId: string,
+  expectedVersion: number,
+  reason: string
+) {
   const supabase = await createClient();
-  const { error } = await supabase.rpc("reopen_finance", { p_programme_id: programmeId, p_reason: reason });
+  const { error } = await supabase.rpc("reopen_finance", {
+    p_programme_id: programmeId,
+    p_expected_version: expectedVersion,
+    p_reason: reason,
+  });
   if (error) throw error;
   revalidatePath(`/revenue/${programmeId}`);
 }

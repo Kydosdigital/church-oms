@@ -20,8 +20,6 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
     getRevenueForProgramme(programmeId),
   ]);
 
-  const financeState = entries[0]?.state ?? "draft";
-
   return (
     <div className="p-4 sm:p-6 max-w-2xl">
       <h1 className="text-2xl font-semibold mb-1">{programme.programme_name}</h1>
@@ -31,11 +29,15 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
         programmeId={programmeId}
         categories={categories}
         existingEntries={entries}
-        financeState={financeState}
-        currencyCode={church?.currency_code ?? "USD"}
+        financeState={programme.finance_state}
+        financeVersion={programme.finance_version}
+        currencyCode={church?.currency_code ?? "GBP"}
         canEnter={ctx?.permissions.canEnterFinance(programme.branch_id) ?? false}
         canVerify={ctx?.permissions.canVerifyFinance(programme.branch_id) ?? false}
-        canReopen={ctx?.permissions.isAdministrator() ?? false}
+        canReopen={
+          (ctx?.permissions.isAdministrator() ?? false) &&
+          (ctx?.permissions.hasFinancePermission(programme.branch_id) ?? false)
+        }
       />
     </div>
   );

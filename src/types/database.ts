@@ -14,7 +14,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -576,6 +576,8 @@ export type Database = {
           created_by: string
           duplicate_override: boolean
           duplicate_override_reason: string | null
+          finance_state: Database["public"]["Enums"]["record_state"]
+          finance_version: number
           id: string
           notes: string | null
           preacher_id: string | null
@@ -597,6 +599,8 @@ export type Database = {
           created_by: string
           duplicate_override?: boolean
           duplicate_override_reason?: string | null
+          finance_state?: Database["public"]["Enums"]["record_state"]
+          finance_version?: number
           id?: string
           notes?: string | null
           preacher_id?: string | null
@@ -618,6 +622,8 @@ export type Database = {
           created_by?: string
           duplicate_override?: boolean
           duplicate_override_reason?: string | null
+          finance_state?: Database["public"]["Enums"]["record_state"]
+          finance_version?: number
           id?: string
           notes?: string | null
           preacher_id?: string | null
@@ -983,6 +989,8 @@ export type Database = {
           created_by: string
           duplicate_override: boolean
           duplicate_override_reason: string | null
+          finance_state: Database["public"]["Enums"]["record_state"]
+          finance_version: number
           id: string
           notes: string | null
           preacher_id: string | null
@@ -1003,30 +1011,59 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      reopen_finance: {
-        Args: { p_programme_id: string; p_reason: string }
-        Returns: {
-          category_id: string
-          category_total: number | null
-          created_at: string
-          created_by: string
-          id: string
-          notes: string | null
-          online_amount: number
-          physical_amount: number
-          programme_id: string
-          state: Database["public"]["Enums"]["record_state"]
-          updated_at: string
-          updated_by: string | null
-          version: number
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "revenue_entries"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
+      reopen_finance:
+        | {
+            Args: {
+              p_expected_version: number
+              p_programme_id: string
+              p_reason: string
+            }
+            Returns: {
+              category_id: string
+              category_total: number | null
+              created_at: string
+              created_by: string
+              id: string
+              notes: string | null
+              online_amount: number
+              physical_amount: number
+              programme_id: string
+              state: Database["public"]["Enums"]["record_state"]
+              updated_at: string
+              updated_by: string | null
+              version: number
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "revenue_entries"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: { p_programme_id: string; p_reason: string }
+            Returns: {
+              category_id: string
+              category_total: number | null
+              created_at: string
+              created_by: string
+              id: string
+              notes: string | null
+              online_amount: number
+              physical_amount: number
+              programme_id: string
+              state: Database["public"]["Enums"]["record_state"]
+              updated_at: string
+              updated_by: string | null
+              version: number
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "revenue_entries"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
       resume_attendance_counter: {
         Args: { p_session_id: string }
         Returns: number
@@ -1045,6 +1082,8 @@ export type Database = {
           created_by: string
           duplicate_override: boolean
           duplicate_override_reason: string | null
+          finance_state: Database["public"]["Enums"]["record_state"]
+          finance_version: number
           id: string
           notes: string | null
           preacher_id: string | null
@@ -1065,30 +1104,59 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      return_finance: {
-        Args: { p_programme_id: string; p_reason: string }
-        Returns: {
-          category_id: string
-          category_total: number | null
-          created_at: string
-          created_by: string
-          id: string
-          notes: string | null
-          online_amount: number
-          physical_amount: number
-          programme_id: string
-          state: Database["public"]["Enums"]["record_state"]
-          updated_at: string
-          updated_by: string | null
-          version: number
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "revenue_entries"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
+      return_finance:
+        | {
+            Args: {
+              p_expected_version: number
+              p_programme_id: string
+              p_reason: string
+            }
+            Returns: {
+              category_id: string
+              category_total: number | null
+              created_at: string
+              created_by: string
+              id: string
+              notes: string | null
+              online_amount: number
+              physical_amount: number
+              programme_id: string
+              state: Database["public"]["Enums"]["record_state"]
+              updated_at: string
+              updated_by: string | null
+              version: number
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "revenue_entries"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: { p_programme_id: string; p_reason: string }
+            Returns: {
+              category_id: string
+              category_total: number | null
+              created_at: string
+              created_by: string
+              id: string
+              notes: string | null
+              online_amount: number
+              physical_amount: number
+              programme_id: string
+              state: Database["public"]["Enums"]["record_state"]
+              updated_at: string
+              updated_by: string | null
+              version: number
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "revenue_entries"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
       set_church_user_active: {
         Args: { p_active: boolean; p_user_id: string }
         Returns: undefined
@@ -1103,6 +1171,8 @@ export type Database = {
           created_by: string
           duplicate_override: boolean
           duplicate_override_reason: string | null
+          finance_state: Database["public"]["Enums"]["record_state"]
+          finance_version: number
           id: string
           notes: string | null
           preacher_id: string | null
@@ -1127,30 +1197,55 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
-      submit_finance: {
-        Args: { p_programme_id: string }
-        Returns: {
-          category_id: string
-          category_total: number | null
-          created_at: string
-          created_by: string
-          id: string
-          notes: string | null
-          online_amount: number
-          physical_amount: number
-          programme_id: string
-          state: Database["public"]["Enums"]["record_state"]
-          updated_at: string
-          updated_by: string | null
-          version: number
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "revenue_entries"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
+      submit_finance:
+        | {
+            Args: { p_programme_id: string }
+            Returns: {
+              category_id: string
+              category_total: number | null
+              created_at: string
+              created_by: string
+              id: string
+              notes: string | null
+              online_amount: number
+              physical_amount: number
+              programme_id: string
+              state: Database["public"]["Enums"]["record_state"]
+              updated_at: string
+              updated_by: string | null
+              version: number
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "revenue_entries"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: { p_expected_version: number; p_programme_id: string }
+            Returns: {
+              category_id: string
+              category_total: number | null
+              created_at: string
+              created_by: string
+              id: string
+              notes: string | null
+              online_amount: number
+              physical_amount: number
+              programme_id: string
+              state: Database["public"]["Enums"]["record_state"]
+              updated_at: string
+              updated_by: string | null
+              version: number
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "revenue_entries"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
       user_branch_ids: {
         Args: { p_role?: Database["public"]["Enums"]["app_role"] }
         Returns: string[]
@@ -1165,6 +1260,8 @@ export type Database = {
           created_by: string
           duplicate_override: boolean
           duplicate_override_reason: string | null
+          finance_state: Database["public"]["Enums"]["record_state"]
+          finance_version: number
           id: string
           notes: string | null
           preacher_id: string | null
@@ -1185,30 +1282,55 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      verify_finance: {
-        Args: { p_programme_id: string }
-        Returns: {
-          category_id: string
-          category_total: number | null
-          created_at: string
-          created_by: string
-          id: string
-          notes: string | null
-          online_amount: number
-          physical_amount: number
-          programme_id: string
-          state: Database["public"]["Enums"]["record_state"]
-          updated_at: string
-          updated_by: string | null
-          version: number
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "revenue_entries"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
+      verify_finance:
+        | {
+            Args: { p_programme_id: string }
+            Returns: {
+              category_id: string
+              category_total: number | null
+              created_at: string
+              created_by: string
+              id: string
+              notes: string | null
+              online_amount: number
+              physical_amount: number
+              programme_id: string
+              state: Database["public"]["Enums"]["record_state"]
+              updated_at: string
+              updated_by: string | null
+              version: number
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "revenue_entries"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
+        | {
+            Args: { p_expected_version: number; p_programme_id: string }
+            Returns: {
+              category_id: string
+              category_total: number | null
+              created_at: string
+              created_by: string
+              id: string
+              notes: string | null
+              online_amount: number
+              physical_amount: number
+              programme_id: string
+              state: Database["public"]["Enums"]["record_state"]
+              updated_at: string
+              updated_by: string | null
+              version: number
+            }[]
+            SetofOptions: {
+              from: "*"
+              to: "revenue_entries"
+              isOneToOne: false
+              isSetofReturn: true
+            }
+          }
     }
     Enums: {
       app_role:
