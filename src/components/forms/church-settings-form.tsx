@@ -15,7 +15,13 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-export function ChurchSettingsForm({ church }: { church: Church }) {
+export function ChurchSettingsForm({
+  church,
+  timeZones,
+}: {
+  church: Church;
+  timeZones: string[];
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -67,7 +73,17 @@ export function ChurchSettingsForm({ church }: { church: Church }) {
         </div>
         <div>
           <Label htmlFor="timezone">Timezone</Label>
-          <Input id="timezone" placeholder="e.g. Africa/Lagos" {...register("timezone")} />
+          <select
+            id="timezone"
+            {...register("timezone")}
+            className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3"
+          >
+            {timeZones.map((zone) => (
+              <option key={zone} value={zone}>
+                {zone}
+              </option>
+            ))}
+          </select>
           <FieldError>{errors.timezone?.message}</FieldError>
         </div>
       </div>
