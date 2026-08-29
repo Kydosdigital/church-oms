@@ -62,6 +62,7 @@ export type Database = {
           created_at: string
           id: string
           session_id: string
+          station_label: string | null
           status: string
           submitted_at: string | null
           updated_at: string
@@ -72,6 +73,7 @@ export type Database = {
           created_at?: string
           id?: string
           session_id: string
+          station_label?: string | null
           status?: string
           submitted_at?: string | null
           updated_at?: string
@@ -82,6 +84,7 @@ export type Database = {
           created_at?: string
           id?: string
           session_id?: string
+          station_label?: string | null
           status?: string
           submitted_at?: string | null
           updated_at?: string
@@ -942,6 +945,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_attendance_counter_station: {
+        Args: { p_session_id: string; p_station_label: string }
+        Returns: string
+      }
       close_attendance_counter: {
         Args: { p_session_id: string }
         Returns: number
