@@ -137,7 +137,7 @@ export async function assignManagedUserRole(input: ManagedUserRoleValues) {
     return;
   }
 
-  const branchId = input.branch_id ?? null;
+  const branchId = input.role === "administrator" ? null : input.branch_id ?? null;
   await validateBranch(supabase, branchId, churchId);
 
   await upsertRole(supabase, {
