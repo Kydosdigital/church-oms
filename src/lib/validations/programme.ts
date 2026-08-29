@@ -2,6 +2,11 @@ import { z } from "zod";
 
 const nonNegativeInt = z.coerce.number().int().min(0, "Must be zero or greater");
 
+const optionalUuid = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  z.string().uuid().optional()
+);
+
 export const serviceDetailsSchema = z.object({
   branch_id: z.string().uuid("Select a branch"),
   service_type_id: z.string().uuid("Select a service type"),
@@ -9,7 +14,9 @@ export const serviceDetailsSchema = z.object({
   programme_date: z.string().min(1, "Date is required"),
   programme_name: z.string().min(1, "Programme name is required"),
   classification: z.enum(["routine", "special_event"]),
-  preacher_id: z.string().uuid().optional().nullable(),
+  preacher_type: z.enum(["none", "existing", "guest"]).default("none"),
+  preacher_id: optionalUuid,
+  guest_preacher_name: z.string().trim().max(120, "Guest preacher name is too long").optional(),
   guest_minister_ids: z.array(z.string().uuid()).default([]),
   sermon_topic: z.string().optional(),
 });
@@ -47,7 +54,23 @@ export const duplicateOverrideSchema = z.object({
 export const programmeEntrySchema = serviceDetailsSchema
   .merge(attendanceSchema)
   .merge(notesSchema)
-  .merge(duplicateOverrideSchema);
+  .merge(duplicateOverrideSchema)
+  .superRefine((values, ctx) => {
+    if (values.preacher_type === "existing" && !values.preacher_id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["preacher_id"],
+        message: "Select the preacher",
+      });
+    }
+    if (values.preacher_type === "guest" && !values.guest_preacher_name?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["guest_preacher_name"],
+        message: "Enter the guest preacher's name",
+      });
+    }
+  });
 
 export type ProgrammeEntryValues = z.infer<typeof programmeEntrySchema>;
 export type ServiceDetailsValues = z.infer<typeof serviceDetailsSchema>;
