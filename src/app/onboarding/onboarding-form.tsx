@@ -4,12 +4,19 @@ import { useActionState } from "react";
 import { provisionChurch, type OnboardingActionState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
+import type { LocaleOption } from "@/lib/locales";
 
 const initialState: OnboardingActionState = {};
 
 const COMMON_CURRENCIES = ["USD", "GBP", "EUR", "NGN", "GHS", "KES", "ZAR", "CAD", "AUD"];
 
-export function OnboardingForm({ timeZones }: { timeZones: string[] }) {
+export function OnboardingForm({
+  timeZones,
+  localeOptions,
+}: {
+  timeZones: string[];
+  localeOptions: LocaleOption[];
+}) {
   const [state, formAction, pending] = useActionState(provisionChurch, initialState);
 
   return (
@@ -19,7 +26,7 @@ export function OnboardingForm({ timeZones }: { timeZones: string[] }) {
         <Input id="name" name="name" required placeholder="e.g. Grace Community Church" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label htmlFor="currency">Currency</Label>
           <select
@@ -52,9 +59,26 @@ export function OnboardingForm({ timeZones }: { timeZones: string[] }) {
           </select>
         </div>
       </div>
+      <div>
+        <Label htmlFor="locale">Regional date &amp; number format</Label>
+        <select
+          id="locale"
+          name="locale"
+          required
+          defaultValue="en-GB"
+          className="block w-full rounded-brand border border-surface-border bg-background px-3 h-11 text-base focus-visible:outline-2 focus-visible:outline-brand"
+        >
+          {localeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <p className="text-xs text-muted -mt-2">
-        Choose the church&rsquo;s local timezone. This controls how timestamps and sign-offs are shown
-        and can be changed later from Church settings.
+        Timezone controls when timestamps are shown. Regional format controls date order,
+        separators and number/currency formatting. Both can be changed later in Church settings.
       </p>
 
       <FieldError>{state.error}</FieldError>
