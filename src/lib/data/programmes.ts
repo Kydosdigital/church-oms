@@ -149,19 +149,31 @@ export async function createDraftProgramme(values: ProgrammeEntryValues) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { data: venue } = await supabase
-    .from("venues")
-    .select("default_capacity")
-    .eq("id", values.venue_id)
-    .single();
-
-  const { data: branch } = await supabase
-    .from("branches")
-    .select("church_id")
-    .eq("id", values.branch_id)
-    .single();
+  const [{ data: venue }, { data: branch }, { data: serviceType }] = await Promise.all([
+    supabase
+      .from("venues")
+      .select("branch_id, default_capacity")
+      .eq("id", values.venue_id)
+      .maybeSingle(),
+    supabase
+      .from("branches")
+      .select("church_id")
+      .eq("id", values.branch_id)
+      .maybeSingle(),
+    supabase
+      .from("service_types")
+      .select("church_id")
+      .eq("id", values.service_type_id)
+      .maybeSingle(),
+  ]);
 
   if (!branch) throw new Error("Branch not found");
+  if (!venue || venue.branch_id !== values.branch_id) {
+    throw new Error("The selected venue does not belong to this branch");
+  }
+  if (!serviceType || serviceType.church_id !== branch.church_id) {
+    throw new Error("The selected service type does not belong to this church");
+  }
 
   const total = totalAttendance(values);
   const capacity = venue?.default_capacity ?? 0;
