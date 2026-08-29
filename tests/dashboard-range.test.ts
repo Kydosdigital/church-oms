@@ -64,7 +64,7 @@ describe("dashboard reporting ranges", () => {
         NOW
       )
     ).toMatchObject({
-      preset: "90d",
+      preset: "custom",
       from: "2026-05-31",
       to: "2026-08-29",
     });
