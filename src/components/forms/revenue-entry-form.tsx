@@ -24,6 +24,7 @@ interface Props {
   financeState: RecordState;
   financeVersion: number;
   currencyCode: string;
+  localeCode: string;
   canEnter: boolean;
   canVerify: boolean;
   canReopen: boolean;
@@ -44,6 +45,7 @@ export function RevenueEntryForm({
   financeState,
   financeVersion,
   currencyCode,
+  localeCode,
   canEnter,
   canVerify,
   canReopen,
@@ -190,7 +192,7 @@ export function RevenueEntryForm({
               <div key={cat.id} className="rounded-brand border border-surface-border p-3">
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-medium">{cat.name}</p>
-                  <p className="text-sm text-muted">{formatCurrency(rowTotal, currencyCode)}</p>
+                  <p className="text-sm text-muted">{formatCurrency(rowTotal, currencyCode, localeCode)}</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -241,7 +243,7 @@ export function RevenueEntryForm({
       <div className="flex items-center justify-between rounded-brand bg-brand-muted px-4 py-3">
         <span className="text-sm font-medium text-brand">Programme total</span>
         <span className="text-2xl font-bold text-brand">
-          {formatCurrency(overallTotal, currencyCode)}
+          {formatCurrency(overallTotal, currencyCode, localeCode)}
         </span>
       </div>
 
