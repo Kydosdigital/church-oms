@@ -931,6 +931,15 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
+      complete_church_onboarding: {
+        Args: {
+          p_currency?: string
+          p_name: string
+          p_timezone?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       current_church_id: { Args: never; Returns: string }
       has_finance_history_permission: {
         Args: { p_branch_id?: string }
