@@ -67,7 +67,7 @@ export function givingPerAttendee(totalGiving: number, totalAttendance: number):
   return totalGiving / totalAttendance;
 }
 
-export function formatCurrency(amount: number, currencyCode: string, locale = "en-US"): string {
+export function formatCurrency(amount: number, currencyCode: string, locale = "en-GB"): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency: currencyCode }).format(amount);
 }
 
