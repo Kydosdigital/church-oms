@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { OnboardingForm } from "./onboarding-form";
+import { getSupportedTimeZones } from "@/lib/timezones";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -29,7 +30,7 @@ export default async function OnboardingPage() {
             first administrator.
           </p>
         </div>
-        <OnboardingForm />
+        <OnboardingForm timeZones={getSupportedTimeZones()} />
       </div>
     </main>
   );
