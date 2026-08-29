@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CounterEntryRow, CounterSessionRow } from "@/lib/data/live-counter";
 
@@ -44,8 +45,16 @@ export function LiveCounter({
   const [starting, setStarting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [claimingStation, setClaimingStation] = useState(false);
+  const [editingStation, setEditingStation] = useState(false);
+  const [stationInput, setStationInput] = useState(
+    () =>
+      initialEntries.find((entry) => entry.user_id === currentUserId)?.station_label ??
+      ""
+  );
 
   const ownEntry = entries.find((entry) => entry.user_id === currentUserId);
+  const ownStation = ownEntry?.station_label?.trim() || null;
   // Aggregate totals live on the session row so an ordinary Usher can see the
   // combined service count without SELECT access to every other Usher's
   // individual entry. Reviewers still receive the detailed rows through RLS.
@@ -85,6 +94,7 @@ export function LiveCounter({
             user_id: rawRow.user_id,
             count: rawRow.count,
             status: rawRow.status === "submitted" ? "submitted" : "counting",
+            station_label: rawRow.station_label,
             submitted_at: rawRow.submitted_at,
             created_at: rawRow.created_at,
             updated_at: rawRow.updated_at,
@@ -176,7 +186,7 @@ export function LiveCounter({
     const { data, error: queryError } = await supabase
       .from("attendance_counter_entries")
       .select(
-        "id, session_id, user_id, count, status, submitted_at, created_at, updated_at"
+        "id, session_id, user_id, count, status, station_label, submitted_at, created_at, updated_at"
       )
       .eq("session_id", sessionId)
       .order("created_at");
@@ -226,43 +236,63 @@ export function LiveCounter({
     setNotice(wasExisting ? "Live counter reopened." : "Live counter started.");
   }
 
+  async function claimStation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session || session.status !== "open" || !canCount) return;
+
+    const label = stationInput.trim();
+    if (label.length < 2) {
+      setError("Enter a door or counting-zone name.");
+      return;
+    }
+
+    setClaimingStation(true);
+    setError(null);
+    setNotice(null);
+
+    const { data, error: rpcError } = await supabase.rpc(
+      "claim_attendance_counter_station",
+      {
+        p_session_id: session.id,
+        p_station_label: label,
+      }
+    );
+
+    setClaimingStation(false);
+
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+
+    await refreshEntries(session.id);
+    setStationInput(String(data ?? label));
+    setEditingStation(false);
+    setNotice(`Counting station set to ${String(data ?? label)}.`);
+  }
+
   function adjust(delta: 1 | -1) {
     if (!session || session.status !== "open" || !canCount) return;
-    if (ownEntry?.status === "submitted") return;
-    if (delta < 0 && (ownEntry?.count ?? 0) <= 0) return;
+    if (!ownEntry || !ownStation) {
+      setError("Claim a door or counting zone before counting.");
+      return;
+    }
+    if (ownEntry.status === "submitted") return;
+    if (delta < 0 && ownEntry.count <= 0) return;
 
     setError(null);
     setNotice(null);
-    setEntries((current) => {
-      const existing = current.find((entry) => entry.user_id === currentUserId);
-      if (existing) {
-        return current.map((entry) =>
-          entry.user_id === currentUserId
-            ? {
-                ...entry,
-                count: Math.max(0, entry.count + delta),
-                updated_at: new Date().toISOString(),
-              }
-            : entry
-        );
-      }
-
-      const now = new Date().toISOString();
-      return [
-        ...current,
-        {
-          id: `optimistic-${currentUserId}`,
-          session_id: session.id,
-          user_id: currentUserId,
-          count: Math.max(0, delta),
-          status: "counting",
-          submitted_at: null,
-          created_at: now,
-          updated_at: now,
-          user_name: currentUserName,
-        },
-      ];
-    });
+    setEntries((current) =>
+      current.map((entry) =>
+        entry.user_id === currentUserId
+          ? {
+              ...entry,
+              count: Math.max(0, entry.count + delta),
+              updated_at: new Date().toISOString(),
+            }
+          : entry
+      )
+    );
 
     // Do not disable the large tap target while saving. Each adjustment is an
     // atomic database increment, so rapid taps from the same usher are safe.
@@ -439,57 +469,120 @@ export function LiveCounter({
                   {ownEntry?.count ?? 0}
                 </p>
                 <p className="mt-2 text-xs text-muted">
+                  {ownStation ? `Station: ${ownStation}` : "No counting station claimed yet"}
+                </p>
+                <p className="mt-1 text-xs text-muted">
                   {ownSubmitted
                     ? "Submitted and locked"
                     : pendingWrites > 0
                       ? "Saving taps…"
-                      : "Saved"}
+                      : ownStation
+                        ? "Saved"
+                        : "Claim your door or zone to start"}
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => adjust(1)}
-                disabled={!sessionOpen || ownSubmitted}
-                className="mt-6 flex min-h-56 w-full select-none items-center justify-center rounded-brand bg-brand px-6 text-4xl font-bold text-brand-foreground shadow-sm transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-64"
-              >
-                + TAP TO COUNT
-              </button>
-
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => adjust(-1)}
-                  disabled={
-                    !sessionOpen || ownSubmitted || (ownEntry?.count ?? 0) === 0
-                  }
+              {sessionOpen && (!ownStation || editingStation) ? (
+                <form
+                  onSubmit={claimStation}
+                  className="mt-6 rounded-brand border border-surface-border bg-background p-4"
                 >
-                  Undo last tap
-                </Button>
-                {ownSubmitted ? (
-                  <Button
+                  <Label htmlFor="counter-station">Door / counting zone</Label>
+                  <Input
+                    id="counter-station"
+                    value={stationInput}
+                    onChange={(event) => setStationInput(event.target.value)}
+                    placeholder="e.g. Main entrance"
+                    maxLength={80}
+                    autoComplete="off"
+                  />
+                  <p className="mt-2 text-xs text-muted">
+                    Use one unique entrance or zone per counter so two Ushers do not
+                    count the same arrivals.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button type="submit" disabled={claimingStation}>
+                      {claimingStation
+                        ? "Claiming…"
+                        : ownStation
+                          ? "Update station"
+                          : "Claim station"}
+                    </Button>
+                    {ownStation && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => {
+                          setStationInput(ownStation);
+                          setEditingStation(false);
+                        }}
+                        disabled={claimingStation}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                </form>
+              ) : ownStation ? (
+                <>
+                  <button
                     type="button"
-                    variant="secondary"
-                    onClick={resumeCount}
-                    disabled={!sessionOpen || submitting}
+                    onClick={() => adjust(1)}
+                    disabled={!sessionOpen || ownSubmitted}
+                    className="mt-6 flex min-h-56 w-full select-none items-center justify-center rounded-brand bg-brand px-6 text-4xl font-bold text-brand-foreground shadow-sm transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-64"
                   >
-                    {submitting ? "Resuming…" : "Resume counting"}
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={submitCount}
-                    disabled={!sessionOpen || submitting || pendingWrites > 0}
-                  >
-                    {submitting
-                      ? "Submitting…"
-                      : pendingWrites > 0
-                        ? "Saving taps…"
-                        : "Submit my count"}
-                  </Button>
-                )}
-              </div>
+                    + TAP TO COUNT
+                  </button>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => adjust(-1)}
+                      disabled={
+                        !sessionOpen || ownSubmitted || (ownEntry?.count ?? 0) === 0
+                      }
+                    >
+                      Undo last tap
+                    </Button>
+                    {ownSubmitted ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={resumeCount}
+                        disabled={!sessionOpen || submitting}
+                      >
+                        {submitting ? "Resuming…" : "Resume counting"}
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        onClick={submitCount}
+                        disabled={!sessionOpen || submitting || pendingWrites > 0}
+                      >
+                        {submitting
+                          ? "Submitting…"
+                          : pendingWrites > 0
+                            ? "Saving taps…"
+                            : "Submit my count"}
+                      </Button>
+                    )}
+                  </div>
+
+                  {sessionOpen && !ownSubmitted && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStationInput(ownStation);
+                        setEditingStation(true);
+                      }}
+                      className="mt-3 text-sm font-medium text-brand hover:underline"
+                    >
+                      Change door / counting zone
+                    </button>
+                  )}
+                </>
+              ) : null}
             </Card>
           )}
 
@@ -600,6 +693,7 @@ export function LiveCounter({
                 <div>
                   <p className="font-medium">{entry.user_name}</p>
                   <p className="text-xs text-muted">
+                    {entry.station_label ? `${entry.station_label} · ` : "Unassigned · "}
                     {entry.status === "submitted" ? "Submitted" : "Counting now"}
                   </p>
                 </div>

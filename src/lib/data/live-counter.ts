@@ -30,7 +30,7 @@ export async function getLiveCounterForProgramme(programmeId: string): Promise<{
 
   const { data: entries, error: entriesError } = await supabase
     .from("attendance_counter_entries")
-    .select("id, session_id, user_id, count, status, submitted_at, created_at, updated_at")
+    .select("id, session_id, user_id, count, status, station_label, submitted_at, created_at, updated_at")
     .eq("session_id", session.id)
     .order("created_at");
 
