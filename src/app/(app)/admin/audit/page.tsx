@@ -1,11 +1,31 @@
-import { listAuditEvents, listAuditEntityTables } from "@/lib/data/admin";
+import {
+  getChurchSettings,
+  listAuditEvents,
+  listAuditEntityTables,
+} from "@/lib/data/admin";
 import { Card } from "@/components/ui/card";
+import { formatChurchDateTime } from "@/lib/locales";
 
 function param(v: string | string[] | undefined): string | undefined {
   return Array.isArray(v) ? v[0] : v;
 }
 
-const ACTIONS = ["create", "update", "submit", "return", "verify", "reopen", "export", "admin_config"];
+const ACTIONS = [
+  "create",
+  "update",
+  "submit",
+  "return",
+  "verify",
+  "reopen",
+  "export",
+  "admin_config",
+  "counter_open",
+  "counter_reopen",
+  "counter_close",
+  "counter_submit",
+  "counter_resume",
+  "counter_station_claim",
+];
 
 export default async function AuditLogPage(props: PageProps<"/admin/audit">) {
   const searchParams = await props.searchParams;
@@ -14,10 +34,13 @@ export default async function AuditLogPage(props: PageProps<"/admin/audit">) {
   const from = param(searchParams.from);
   const to = param(searchParams.to);
 
-  const [events, entityTables] = await Promise.all([
+  const [events, entityTables, church] = await Promise.all([
     listAuditEvents({ entityTable, action, from, to: to ? `${to}T23:59:59` : undefined }),
     listAuditEntityTables(),
+    getChurchSettings(),
   ]);
+  const localeCode = church?.locale_code ?? "en-GB";
+  const timeZone = church?.timezone ?? "UTC";
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -97,7 +120,9 @@ export default async function AuditLogPage(props: PageProps<"/admin/audit">) {
           <tbody className="divide-y divide-surface-border">
             {events.map((e) => (
               <tr key={e.id}>
-                <td className="p-3 whitespace-nowrap">{new Date(e.created_at).toLocaleString()}</td>
+                <td className="p-3 whitespace-nowrap">
+                  {formatChurchDateTime(e.created_at, localeCode, timeZone)}
+                </td>
                 <td className="p-3">{e.app_users?.full_name ?? "System"}</td>
                 <td className="p-3">{e.entity_table}</td>
                 <td className="p-3">{e.action}</td>

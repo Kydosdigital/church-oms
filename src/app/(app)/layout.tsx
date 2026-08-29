@@ -3,6 +3,13 @@ import { redirect } from "next/navigation";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { getPlatformAdminContext } from "@/lib/data/platform";
 import { AppShell } from "@/components/layout/app-shell";
+import {
+  canAccessAdmin,
+  canAccessLiveCounter,
+  canAccessProgrammes,
+  canAccessReports,
+  canAccessRevenue,
+} from "@/lib/access-policy";
 
 // Everything under this route group requires a signed-in session and has no
 // search-relevant content of its own (dashboards, data-entry forms, admin
@@ -25,6 +32,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/login?awaiting_setup=1");
   }
 
+  // Database authorization helpers already treat active=false as immediate loss
+  // of tenant/role authority. Mirror that at the app-shell boundary so a
+  // deactivated person does not see navigation or confusing empty screens while
+  // their Supabase Auth session is still valid.
+  if (!ctx.user.active) {
+    redirect("/account-inactive");
+  }
+
   // A freshly signed-up user has an app_users row (via the on_auth_user_created
   // trigger) but no church yet — send them to set one up before anything else
   // in the app (which assumes a church_id everywhere) can render sensibly.
@@ -32,22 +47,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/onboarding");
   }
 
-  const hasRole = (...roles: string[]) => ctx.roles.some((assignment) => roles.includes(assignment.role));
-  const isAdministrator = ctx.permissions.isAdministrator();
-  const canUseLiveCounter = isAdministrator || hasRole("usher", "attendance_verifier", "pastor");
+  const isAdministrator = canAccessAdmin(ctx);
 
   // AppShell is a Client Component. Only pass plain serializable data across
   // the Server -> Client boundary, never the PermissionContext class instance.
+  // The same access-policy functions also guard direct route access, so the
+  // navigation and server routes cannot drift apart.
   const shellContext = {
     user: { full_name: ctx.user.full_name },
-    canViewFinance: ctx.permissions.hasFinancePermission(),
-    canViewProgrammes:
-      isAdministrator || hasRole("usher", "attendance_verifier", "pastor"),
-    canViewReports:
-      isAdministrator ||
-      hasRole("pastor", "attendance_verifier") ||
-      ctx.permissions.hasFinanceHistoryPermission(),
-    canUseLiveCounter,
+    canViewFinance: canAccessRevenue(ctx),
+    canViewProgrammes: canAccessProgrammes(ctx),
+    canViewReports: canAccessReports(ctx),
+    canUseLiveCounter: canAccessLiveCounter(ctx),
     isAdministrator,
     isPlatformAdmin: Boolean(platformAdmin),
   };

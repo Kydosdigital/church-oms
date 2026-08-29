@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserContext } from "@/lib/data/current-user";
+import { requireReportsAccess } from "@/lib/route-access";
 import { getAttendanceTrend } from "@/lib/data/dashboards";
 import { getAttendanceGivingComparison } from "@/lib/data/reports";
 import { resolveDashboardRange } from "@/lib/dashboard-range";
@@ -12,7 +12,7 @@ import { formatChurchDate } from "@/lib/locales";
 
 export default async function ReportsPage(props: PageProps<"/reports">) {
   const searchParams = await props.searchParams;
-  const ctx = await getCurrentUserContext();
+  const ctx = await requireReportsAccess();
 
   // Financial history, trends and exports are a deliberately stronger
   // permission than entering the current service's offering.

@@ -30,6 +30,9 @@ export async function GET(request: NextRequest) {
   if (!ctx) {
     return new Response("Unauthorized", { status: 401 });
   }
+  if (!ctx.user.active) {
+    return new Response("Account inactive", { status: 403 });
+  }
   if (!ctx.permissions.hasFinanceHistoryPermission()) {
     return new Response("Past-finance permission required", { status: 403 });
   }
