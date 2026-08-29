@@ -4,15 +4,34 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { OfferingCategory, RevenueEntry, FundraisingProject } from "@/types/domain";
 
-export async function listActiveCategories(): Promise<OfferingCategory[]> {
+type OfferingCategoryWithServiceScope = OfferingCategory & {
+  offering_category_service_types: { service_type_id: string }[];
+};
+
+export async function listActiveCategories(
+  serviceTypeId: string
+): Promise<OfferingCategory[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("offering_categories")
-    .select("*")
+    .select("*, offering_category_service_types(service_type_id)")
     .eq("active", true)
     .order("category_type")
     .order("name");
-  return (data ?? []) as OfferingCategory[];
+
+  if (error) throw error;
+
+  return ((data ?? []) as unknown as OfferingCategoryWithServiceScope[])
+    .filter(
+      (category) =>
+        category.applies_to_all_service_types ||
+        category.offering_category_service_types.some(
+          (scope) => scope.service_type_id === serviceTypeId
+        )
+    )
+    .map(({ offering_category_service_types: _scope, ...category }) =>
+      category as OfferingCategory
+    );
 }
 
 export async function getRevenueForProgramme(programmeId: string): Promise<RevenueEntry[]> {
@@ -216,8 +235,33 @@ export async function createOfferingCategory(input: OfferingCategoryInput) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { data: profile } = await supabase.from("app_users").select("church_id").eq("id", user.id).single();
+  const { data: profile } = await supabase
+    .from("app_users")
+    .select("church_id")
+    .eq("id", user.id)
+    .single();
   if (!profile?.church_id) throw new Error("User is not assigned to a church yet");
+
+  const scopedServiceTypeIds = input.applies_to_all_service_types
+    ? []
+    : Array.from(new Set(input.service_type_ids ?? []));
+
+  if (!input.applies_to_all_service_types && scopedServiceTypeIds.length === 0) {
+    throw new Error("Select at least one service type for this offering category");
+  }
+
+  if (scopedServiceTypeIds.length > 0) {
+    const { data: serviceTypes, error: serviceTypeError } = await supabase
+      .from("service_types")
+      .select("id")
+      .in("id", scopedServiceTypeIds)
+      .eq("active", true);
+
+    if (serviceTypeError) throw serviceTypeError;
+    if ((serviceTypes ?? []).length !== scopedServiceTypeIds.length) {
+      throw new Error("One or more selected service types are not available in this church");
+    }
+  }
 
   const { data: category, error } = await supabase
     .from("offering_categories")
@@ -232,19 +276,45 @@ export async function createOfferingCategory(input: OfferingCategoryInput) {
     .single();
   if (error) throw error;
 
-  if (!input.applies_to_all_service_types && input.service_type_ids?.length) {
-    await supabase.from("offering_category_service_types").insert(
-      input.service_type_ids.map((service_type_id) => ({ category_id: category.id, service_type_id }))
-    );
-  }
+  try {
+    if (scopedServiceTypeIds.length > 0) {
+      const { error: scopeError } = await supabase
+        .from("offering_category_service_types")
+        .insert(
+          scopedServiceTypeIds.map((service_type_id) => ({
+            category_id: category.id,
+            service_type_id,
+          }))
+        );
+      if (scopeError) throw scopeError;
+    }
 
-  if (input.category_type === "project") {
-    await supabase.from("fundraising_projects").insert({
-      category_id: category.id,
-      target_amount: input.target_amount || null,
-      start_date: input.start_date || null,
-      end_date: input.end_date || null,
-    });
+    if (input.category_type === "project") {
+      const { error: projectError } = await supabase
+        .from("fundraising_projects")
+        .insert({
+          category_id: category.id,
+          target_amount: input.target_amount || null,
+          start_date: input.start_date || null,
+          end_date: input.end_date || null,
+        });
+      if (projectError) throw projectError;
+    }
+  } catch (childError) {
+    const { error: cleanupError } = await supabase
+      .from("offering_categories")
+      .delete()
+      .eq("id", category.id);
+
+    if (cleanupError) {
+      const originalMessage =
+        childError instanceof Error ? childError.message : "unknown setup error";
+      throw new Error(
+        `Could not finish category setup: ${originalMessage}. The partial category also could not be cleaned up.`
+      );
+    }
+
+    throw childError;
   }
 
   revalidatePath("/admin/categories");
