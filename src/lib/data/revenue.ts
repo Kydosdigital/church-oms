@@ -2,35 +2,70 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { fundraisingProjectAcceptsProgrammeDate } from "@/lib/fundraising";
+import {
+  fundraisingProjectSettingsSchema,
+  type FundraisingProjectSettingsValues,
+} from "@/lib/validations/revenue";
 import type { OfferingCategory, RevenueEntry, FundraisingProject } from "@/types/domain";
 
-type OfferingCategoryWithServiceScope = OfferingCategory & {
+type OfferingCategoryWithAvailability = OfferingCategory & {
   offering_category_service_types: { service_type_id: string }[];
+  fundraising_projects:
+    | Pick<
+        FundraisingProject,
+        "start_date" | "end_date" | "accepting_entries_after_end_override"
+      >
+    | null;
 };
 
 export async function listActiveCategories(
-  serviceTypeId: string
+  serviceTypeId: string,
+  programmeDate: string,
+  includeCategoryIds: string[] = []
 ): Promise<OfferingCategory[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("offering_categories")
-    .select("*, offering_category_service_types(service_type_id)")
-    .eq("active", true)
+    .select(
+      "*, offering_category_service_types(service_type_id), fundraising_projects(start_date,end_date,accepting_entries_after_end_override)"
+    )
     .order("category_type")
     .order("name");
 
   if (error) throw error;
 
-  return ((data ?? []) as unknown as OfferingCategoryWithServiceScope[])
-    .filter(
-      (category) =>
+  const includeSet = new Set(includeCategoryIds);
+
+  return ((data ?? []) as unknown as OfferingCategoryWithAvailability[])
+    .filter((category) => {
+      // A category already used on this programme stays visible for legitimate
+      // correction even if it is later deactivated or its project window closes.
+      if (includeSet.has(category.id)) return true;
+      if (!category.active) return false;
+
+      const serviceMatches =
         category.applies_to_all_service_types ||
         category.offering_category_service_types.some(
           (scope) => scope.service_type_id === serviceTypeId
-        )
-    )
-    .map(({ offering_category_service_types: _scope, ...category }) =>
-      category as OfferingCategory
+        );
+      if (!serviceMatches) return false;
+
+      if (category.category_type === "project") {
+        return fundraisingProjectAcceptsProgrammeDate(
+          category.fundraising_projects,
+          programmeDate
+        );
+      }
+
+      return true;
+    })
+    .map(
+      ({
+        offering_category_service_types: _scope,
+        fundraising_projects: _project,
+        ...category
+      }) => category as OfferingCategory
     );
 }
 
@@ -205,6 +240,7 @@ export interface OfferingCategoryInput {
   target_amount?: number;
   start_date?: string;
   end_date?: string;
+  accepting_entries_after_end_override?: boolean;
 }
 
 export type OfferingCategoryWithProject = OfferingCategory & {
@@ -297,6 +333,8 @@ export async function createOfferingCategory(input: OfferingCategoryInput) {
           target_amount: input.target_amount || null,
           start_date: input.start_date || null,
           end_date: input.end_date || null,
+          accepting_entries_after_end_override:
+            input.accepting_entries_after_end_override ?? false,
         });
       if (projectError) throw projectError;
     }
@@ -319,6 +357,32 @@ export async function createOfferingCategory(input: OfferingCategoryInput) {
 
   revalidatePath("/admin/categories");
   return category;
+}
+
+export async function updateFundraisingProjectSettings(
+  categoryId: string,
+  input: FundraisingProjectSettingsValues
+) {
+  const values = fundraisingProjectSettingsSchema.parse(input);
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("fundraising_projects")
+    .update({
+      target_amount: values.target_amount ?? null,
+      start_date: values.start_date || null,
+      end_date: values.end_date || null,
+      accepting_entries_after_end_override:
+        values.accepting_entries_after_end_override,
+    })
+    .eq("category_id", categoryId)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error("Fundraising project settings were not found");
+
+  revalidatePath("/admin/categories");
 }
 
 /** CFG-04: used categories cannot be deleted, only deactivated. */
