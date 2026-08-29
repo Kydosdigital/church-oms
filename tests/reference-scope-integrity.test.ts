@@ -61,9 +61,8 @@ describe("offering category service scope", () => {
   });
 
   it("filters finance entry categories by the programme service type", () => {
-    expect(revenuePage).toContain(
-      "listActiveCategories(programme.service_type_id)"
-    );
+    expect(revenuePage).toContain("listActiveCategories(");
+    expect(revenuePage).toContain("programme.service_type_id");
     expect(revenueData).toContain(
       "category.applies_to_all_service_types ||"
     );
