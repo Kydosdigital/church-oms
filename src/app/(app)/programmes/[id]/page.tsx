@@ -4,10 +4,11 @@ import { getProgramme } from "@/lib/data/programmes";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { StateBadge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { VerificationActions } from "@/components/forms/verification-actions";
 import { capacityUtilization, formatPercent } from "@/lib/calculations";
+import { SignoffTimeline } from "@/components/workflow/signoff-timeline";
 import type { Signoff } from "@/types/domain";
 
 export default async function ProgrammeDetailPage(props: PageProps<"/programmes/[id]">) {
@@ -18,13 +19,34 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
 
   const ctx = await getCurrentUserContext();
   const supabase = await createClient();
-  const { data: signoffsData } = await supabase
-    .from("signoffs")
-    .select("*, app_users(full_name)")
-    .eq("programme_id", id)
-    .eq("record_kind", "attendance")
-    .order("created_at");
-  const signoffs = (signoffsData ?? []) as (Signoff & { app_users: { full_name: string } | null })[];
+  const [{ data: signoffsData }, { data: church }] = await Promise.all([
+    supabase
+      .from("signoffs")
+      .select("*, app_users(full_name)")
+      .eq("programme_id", id)
+      .eq("record_kind", "attendance")
+      .order("created_at"),
+    supabase
+      .from("churches")
+      .select("timezone")
+      .eq("id", programme.church_id)
+      .single(),
+  ]);
+
+  const { data: preacher } = programme.preacher_id
+    ? await supabase
+        .from("ministers")
+        .select("full_name, is_guest")
+        .eq("id", programme.preacher_id)
+        .maybeSingle()
+    : { data: null };
+
+  const signoffs = (
+    (signoffsData ?? []) as (Signoff & { app_users: { full_name: string } | null })[]
+  ).map((signoff) => ({
+    ...signoff,
+    actor_name: signoff.app_users?.full_name ?? null,
+  }));
 
   const canVerify = ctx?.permissions.canVerifyAttendance(programme.branch_id) ?? false;
   const canReopen = ctx?.permissions.isAdministrator() ?? false;
@@ -49,6 +71,28 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
         </div>
         <StateBadge state={programme.state} />
       </div>
+
+      {(preacher || programme.sermon_topic) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Service details</CardTitle>
+          </CardHeader>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-muted">Preacher</dt>
+              <dd className="font-medium">
+                {preacher
+                  ? `${preacher.full_name}${preacher.is_guest ? " (Guest)" : ""}`
+                  : "Not recorded"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted">Sermon topic</dt>
+              <dd className="font-medium">{programme.sermon_topic || "Not recorded"}</dd>
+            </div>
+          </dl>
+        </Card>
+      )}
 
       {canUseLiveCounter && (
         <Card className="border-brand/30 bg-brand-muted/30">
@@ -111,7 +155,13 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
       )}
 
       <Card>
-        <CardHeader><CardTitle>Verification</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Digital attendance sign-off</CardTitle>
+          <CardDescription>
+            No handwritten signature is needed. Church OMS records the authenticated user, church-local
+            time and exact record version for every submission, verification, return and reopen action.
+          </CardDescription>
+        </CardHeader>
         <VerificationActions
           programmeId={programme.id}
           version={programme.version}
@@ -119,15 +169,13 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
           canVerify={canVerify}
           canReopen={canReopen}
         />
-        <ul className="mt-4 space-y-1 text-sm text-muted">
-          {signoffs.map((s) => (
-            <li key={s.id}>
-              <span className="font-medium text-foreground">{s.app_users?.full_name ?? "Unknown"}</span>{" "}
-              {s.action}d this record on {new Date(s.created_at).toLocaleString()}
-              {s.reason ? ` — "${s.reason}"` : ""}
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4">
+          <SignoffTimeline
+            signoffs={signoffs}
+            timeZone={church?.timezone ?? "UTC"}
+            emptyMessage="This attendance record has not been digitally signed yet."
+          />
+        </div>
       </Card>
 
       {canEnterFinance && (
