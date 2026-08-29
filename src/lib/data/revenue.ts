@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fundraisingProjectAcceptsProgrammeDate } from "@/lib/fundraising";
 import {
   fundraisingProjectSettingsSchema,
+  offeringCategorySchema,
   type FundraisingProjectSettingsValues,
 } from "@/lib/validations/revenue";
 import type { OfferingCategory, RevenueEntry, FundraisingProject } from "@/types/domain";
@@ -270,6 +271,8 @@ export async function createOfferingCategory(input: OfferingCategoryInput) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
+
+  input = offeringCategorySchema.parse(input);
 
   const { data: profile } = await supabase
     .from("app_users")
