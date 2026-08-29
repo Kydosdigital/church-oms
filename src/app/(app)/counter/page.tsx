@@ -5,6 +5,8 @@ import { getCurrentUserContext } from "@/lib/data/current-user";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StateBadge } from "@/components/ui/badge";
+import { createClient } from "@/lib/supabase/server";
+import { formatChurchDate } from "@/lib/locales";
 
 export default async function LiveCounterIndexPage() {
   const [ctx, programmes] = await Promise.all([
@@ -13,6 +15,16 @@ export default async function LiveCounterIndexPage() {
   ]);
 
   if (!ctx) redirect("/login");
+
+  const supabase = await createClient();
+  const { data: church } = ctx.user.church_id
+    ? await supabase
+        .from("churches")
+        .select("locale_code")
+        .eq("id", ctx.user.church_id)
+        .single()
+    : { data: null };
+  const localeCode = church?.locale_code ?? "en-GB";
 
   const isAdministrator = ctx.permissions.isAdministrator();
   const visible = programmes.filter((programme) =>
@@ -54,8 +66,13 @@ export default async function LiveCounterIndexPage() {
                     <h2 className="font-semibold">{programme.programme_name}</h2>
                     <StateBadge state={programme.state} />
                   </div>
-                  <p className="mt-1 text-sm text-muted">{formatDate(programme.programme_date)}</p>
-                  <p className="mt-2 text-xs text-muted">Recorded attendance: {attendance.toLocaleString()}</p>
+                  <p className="mt-1 text-sm text-muted">{formatChurchDate(programme.programme_date, localeCode, {
+                    weekday: "short",
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })}</p>
+                  <p className="mt-2 text-xs text-muted">Recorded attendance: {attendance.toLocaleString(localeCode)}</p>
                 </div>
                 <Link href={`/programmes/${programme.id}/counter`}>
                   <Button>Open counter</Button>
@@ -76,11 +93,3 @@ export default async function LiveCounterIndexPage() {
   );
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(`${value}T12:00:00`));
-}
