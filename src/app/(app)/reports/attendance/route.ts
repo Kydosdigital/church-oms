@@ -2,6 +2,8 @@ import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { toCsv } from "@/lib/csv";
 import { toXlsx } from "@/lib/xlsx";
+import { getCurrentUserContext } from "@/lib/data/current-user";
+import { parseReportExportRange } from "@/lib/report-export-range";
 
 interface AttendanceExportRow {
   programme_date: string;
@@ -28,14 +30,32 @@ interface AttendanceExportRow {
  * server-side bypass. */
 export async function GET(request: NextRequest) {
   const format = request.nextUrl.searchParams.get("format");
+  const ctx = await getCurrentUserContext();
+  if (!ctx) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const { range, error: rangeError } = parseReportExportRange(
+    request.nextUrl.searchParams
+  );
+  if (rangeError) {
+    return new Response(rangeError, { status: 400 });
+  }
+
   const supabase = await createClient();
 
-  const { data } = await supabase
+  let query = supabase
     .from("programme_occurrences")
     .select(
       "programme_date, programme_name, classification, state, branches(name), attendance_records(total_attendance, men_count, women_count, teenagers_count, children_count, first_timers_count, converts_count, new_births_count, weddings_count)"
     )
     .order("programme_date", { ascending: false });
+
+  if (range.from && range.to) {
+    query = query.gte("programme_date", range.from).lte("programme_date", range.to);
+  }
+
+  const { data } = await query;
 
   const rows = ((data ?? []) as unknown as AttendanceExportRow[]).map((p) => ({
     date: p.programme_date,
