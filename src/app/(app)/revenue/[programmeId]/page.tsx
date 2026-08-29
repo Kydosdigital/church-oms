@@ -4,6 +4,9 @@ import { getCurrentUserContext } from "@/lib/data/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { listActiveCategories, getRevenueForProgramme } from "@/lib/data/revenue";
 import { RevenueEntryForm } from "@/components/forms/revenue-entry-form";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SignoffTimeline } from "@/components/workflow/signoff-timeline";
+import type { Signoff } from "@/types/domain";
 
 export default async function RevenueEntryPage(props: PageProps<"/revenue/[programmeId]">) {
   const { programmeId } = await props.params;
@@ -13,17 +16,36 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
 
   const ctx = await getCurrentUserContext();
   const supabase = await createClient();
-  const { data: church } = await supabase.from("churches").select("currency_code").eq("id", programme.church_id).single();
+  const { data: church } = await supabase
+    .from("churches")
+    .select("currency_code, timezone")
+    .eq("id", programme.church_id)
+    .single();
 
-  const [categories, entries] = await Promise.all([
+  const [categories, entries, { data: signoffsData }] = await Promise.all([
     listActiveCategories(),
     getRevenueForProgramme(programmeId),
+    supabase
+      .from("signoffs")
+      .select("*, app_users(full_name)")
+      .eq("programme_id", programmeId)
+      .eq("record_kind", "finance")
+      .order("created_at"),
   ]);
 
+  const signoffs = (
+    (signoffsData ?? []) as (Signoff & { app_users: { full_name: string } | null })[]
+  ).map((signoff) => ({
+    ...signoff,
+    actor_name: signoff.app_users?.full_name ?? null,
+  }));
+
   return (
-    <div className="p-4 sm:p-6 max-w-2xl">
-      <h1 className="text-2xl font-semibold mb-1">{programme.programme_name}</h1>
-      <p className="text-sm text-muted mb-6">{programme.programme_date}</p>
+    <div className="p-4 sm:p-6 max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold mb-1">{programme.programme_name}</h1>
+        <p className="text-sm text-muted">{programme.programme_date}</p>
+      </div>
 
       <RevenueEntryForm
         programmeId={programmeId}
@@ -39,6 +61,22 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
           (ctx?.permissions.hasFinancePermission(programme.branch_id) ?? false)
         }
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Digital finance sign-off</CardTitle>
+          <CardDescription>
+            Each workflow action records the authenticated user, church-local timestamp and exact
+            finance version. When independent verification is enabled, the submitter and verifier
+            are separate people.
+          </CardDescription>
+        </CardHeader>
+        <SignoffTimeline
+          signoffs={signoffs}
+          timeZone={church?.timezone ?? "UTC"}
+          emptyMessage="This finance record has not been digitally signed yet."
+        />
+      </Card>
     </div>
   );
 }

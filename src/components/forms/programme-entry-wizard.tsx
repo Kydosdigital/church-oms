@@ -53,6 +53,7 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
     defaultValues: {
       branch_id: lockedBranch?.id,
       classification: "routine",
+      preacher_type: "none",
       men_count: 0,
       women_count: 0,
       teenagers_count: 0,
@@ -101,7 +102,17 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
   }, [values.branch_id, values.service_type_id, values.programme_date]);
 
   const stepFields: Record<number, (keyof ProgrammeEntryValues)[]> = {
-    0: ["branch_id", "service_type_id", "venue_id", "programme_date", "programme_name", "classification"],
+    0: [
+      "branch_id",
+      "service_type_id",
+      "venue_id",
+      "programme_date",
+      "programme_name",
+      "classification",
+      "preacher_type",
+      "preacher_id",
+      "guest_preacher_name",
+    ],
     1: ["men_count", "women_count", "teenagers_count", "children_count"],
     2: ["first_timers_count", "converts_count", "new_births_count", "weddings_count"],
     3: [],
@@ -287,14 +298,54 @@ export function ProgrammeEntryWizard({ reference }: { reference: ReferenceData }
               </label>
             </div>
           </div>
-          <div>
-            <Label htmlFor="preacher_id">Preacher</Label>
-            <select id="preacher_id" {...register("preacher_id")} className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3">
-              <option value="">Select preacher (optional)</option>
-              {reference.ministers.map((m) => (
-                <option key={m.id} value={m.id}>{m.full_name}</option>
-              ))}
-            </select>
+          <div className="space-y-2">
+            <div>
+              <Label htmlFor="preacher_type">Preacher</Label>
+              <select
+                id="preacher_type"
+                {...register("preacher_type")}
+                className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3"
+              >
+                <option value="none">No preacher recorded</option>
+                <option value="existing">Choose an existing preacher</option>
+                <option value="guest">Guest / other preacher</option>
+              </select>
+            </div>
+
+            {values.preacher_type === "existing" && (
+              <div>
+                <Label htmlFor="preacher_id">Choose preacher</Label>
+                <select
+                  id="preacher_id"
+                  {...register("preacher_id")}
+                  className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3"
+                >
+                  <option value="">Select preacher</option>
+                  {reference.ministers.map((minister) => (
+                    <option key={minister.id} value={minister.id}>
+                      {minister.full_name}{minister.is_guest ? " (guest)" : ""}
+                    </option>
+                  ))}
+                </select>
+                <FieldError>{errors.preacher_id?.message}</FieldError>
+              </div>
+            )}
+
+            {values.preacher_type === "guest" && (
+              <div>
+                <Label htmlFor="guest_preacher_name">Guest preacher name</Label>
+                <Input
+                  id="guest_preacher_name"
+                  placeholder="e.g. Pastor Jane Smith"
+                  {...register("guest_preacher_name")}
+                />
+                <p className="text-xs text-muted mt-1">
+                  The guest is saved to this church&rsquo;s preacher records so future reports keep
+                  a consistent person reference.
+                </p>
+                <FieldError>{errors.guest_preacher_name?.message}</FieldError>
+              </div>
+            )}
           </div>
           <div>
             <Label htmlFor="sermon_topic">Sermon topic</Label>
@@ -432,6 +483,12 @@ function ReviewSummary({
   const branch = reference.branches.find((b) => b.id === values.branch_id);
   const venue = reference.venues.find((v) => v.id === values.venue_id);
   const serviceType = reference.serviceTypes.find((s) => s.id === values.service_type_id);
+  const preacher =
+    values.preacher_type === "guest"
+      ? values.guest_preacher_name?.trim() || "—"
+      : values.preacher_type === "existing"
+        ? reference.ministers.find((minister) => minister.id === values.preacher_id)?.full_name ?? "—"
+        : "—";
 
   const rows: [string, string | number][] = [
     ["Branch", branch?.name ?? "—"],
@@ -440,6 +497,8 @@ function ReviewSummary({
     ["Date", values.programme_date],
     ["Programme name", values.programme_name],
     ["Classification", values.classification === "routine" ? "Routine" : "Special event"],
+    ["Preacher", preacher],
+    ["Sermon topic", values.sermon_topic || "—"],
     ["Total attendance", total],
     ["Men / Women / Teenagers / Children", `${values.men_count} / ${values.women_count} / ${values.teenagers_count} / ${values.children_count}`],
     ["First-timers / Converts", `${values.first_timers_count} / ${values.converts_count}`],

@@ -1,6 +1,7 @@
 import { getChurchSettings } from "@/lib/data/admin";
 import { Card, CardDescription } from "@/components/ui/card";
 import { ChurchSettingsForm } from "@/components/forms/church-settings-form";
+import { getSupportedTimeZones } from "@/lib/timezones";
 
 export default async function ChurchSettingsPage() {
   const church = await getChurchSettings();
@@ -26,7 +27,7 @@ export default async function ChurchSettingsPage() {
           controls whether finance records need a second sign-off before they lock.
         </p>
       </div>
-      <ChurchSettingsForm church={church} />
+      <ChurchSettingsForm church={church} timeZones={getSupportedTimeZones(church.timezone)} />
     </div>
   );
 }

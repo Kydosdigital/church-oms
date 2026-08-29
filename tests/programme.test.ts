@@ -46,4 +46,40 @@ describe("programmeEntrySchema", () => {
     const result = programmeEntrySchema.safeParse({ ...base, men_count: -1 });
     expect(result.success).toBe(false);
   });
+
+  it("accepts a guest preacher with a free-text name", () => {
+    const result = programmeEntrySchema.safeParse({
+      ...base,
+      preacher_type: "guest",
+      guest_preacher_name: "Pastor Jane Smith",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires a name when guest preacher is selected", () => {
+    const result = programmeEntrySchema.safeParse({
+      ...base,
+      preacher_type: "guest",
+      guest_preacher_name: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("requires an existing preacher id when existing preacher is selected", () => {
+    const result = programmeEntrySchema.safeParse({
+      ...base,
+      preacher_type: "existing",
+      preacher_id: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("allows no preacher without tripping over an empty select value", () => {
+    const result = programmeEntrySchema.safeParse({
+      ...base,
+      preacher_type: "none",
+      preacher_id: "",
+    });
+    expect(result.success).toBe(true);
+  });
 });
