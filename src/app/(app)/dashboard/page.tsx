@@ -17,6 +17,16 @@ import { resolveDashboardRange } from "@/lib/dashboard-range";
 export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const searchParams = await props.searchParams;
   const ctx = await getCurrentUserContext();
+  const rawAccess = Array.isArray(searchParams.access)
+    ? searchParams.access[0]
+    : searchParams.access;
+  const deniedArea =
+    rawAccess === "admin" ||
+    rawAccess === "programmes" ||
+    rawAccess === "revenue" ||
+    rawAccess === "reports"
+      ? rawAccess
+      : null;
 
   const supabase = await createClient();
   const { data: church } = ctx?.user.church_id
@@ -56,6 +66,16 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
+      {deniedArea && (
+        <Card className="border-warning/40 bg-warning/5">
+          <p className="font-medium">You do not have access to {accessAreaLabel(deniedArea)}.</p>
+          <p className="mt-1 text-sm text-muted">
+            Your church role does not include this area. If you need access, ask an
+            Administrator or Super Admin to update your role.
+          </p>
+        </Card>
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
@@ -194,4 +214,11 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
       )}
     </div>
   );
+}
+
+function accessAreaLabel(area: "admin" | "programmes" | "revenue" | "reports") {
+  if (area === "admin") return "church administration";
+  if (area === "programmes") return "programmes";
+  if (area === "revenue") return "revenue";
+  return "reports";
 }
