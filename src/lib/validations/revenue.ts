@@ -2,6 +2,11 @@ import { z } from "zod";
 
 const nonNegativeAmount = z.coerce.number().min(0, "Amount cannot be negative");
 
+const optionalPositiveAmount = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? undefined : value),
+  z.coerce.number().positive("Target amount must be greater than zero").optional()
+);
+
 export const revenueEntrySchema = z.object({
   category_id: z.string().uuid(),
   physical_amount: nonNegativeAmount,
@@ -16,6 +21,39 @@ export const revenueFormSchema = z.object({
 
 export type RevenueFormValues = z.infer<typeof revenueFormSchema>;
 
+export const fundraisingProjectSettingsSchema = z
+  .object({
+    target_amount: optionalPositiveAmount,
+    start_date: z.string().optional(),
+    end_date: z.string().optional(),
+    accepting_entries_after_end_override: z.boolean().default(false),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      values.start_date &&
+      values.end_date &&
+      values.end_date < values.start_date
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["end_date"],
+        message: "End date cannot be before the start date",
+      });
+    }
+
+    if (values.accepting_entries_after_end_override && !values.end_date) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["accepting_entries_after_end_override"],
+        message: "Set an end date before allowing entries after the end date",
+      });
+    }
+  });
+
+export type FundraisingProjectSettingsValues = z.infer<
+  typeof fundraisingProjectSettingsSchema
+>;
+
 export const offeringCategorySchema = z
   .object({
     name: z.string().min(1, "Name is required"),
@@ -23,9 +61,10 @@ export const offeringCategorySchema = z
     category_type: z.enum(["general", "project", "special"]),
     applies_to_all_service_types: z.boolean().default(true),
     service_type_ids: z.array(z.string().uuid()).default([]),
-    target_amount: z.coerce.number().positive().optional(),
+    target_amount: optionalPositiveAmount,
     start_date: z.string().optional(),
     end_date: z.string().optional(),
+    accepting_entries_after_end_override: z.boolean().default(false),
   })
   .superRefine((values, ctx) => {
     if (
@@ -48,6 +87,18 @@ export const offeringCategorySchema = z
         code: "custom",
         path: ["end_date"],
         message: "End date cannot be before the start date",
+      });
+    }
+
+    if (
+      values.category_type === "project" &&
+      values.accepting_entries_after_end_override &&
+      !values.end_date
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["accepting_entries_after_end_override"],
+        message: "Set an end date before allowing entries after the end date",
       });
     }
   });
