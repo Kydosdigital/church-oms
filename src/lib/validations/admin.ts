@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidTimeZone } from "@/lib/timezones";
+import { isValidLocale } from "@/lib/locales";
 
 export const branchSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -77,10 +78,16 @@ const timeZoneSchema = z
   .min(1, "Timezone is required")
   .refine(isValidTimeZone, "Select a valid timezone");
 
+const localeSchema = z
+  .string()
+  .min(1, "Regional format is required")
+  .refine(isValidLocale, "Select a valid regional format");
+
 export const provisionChurchSchema = z.object({
   name: z.string().min(1, "Church name is required"),
   currency: z.string().min(3, "Use a 3-letter currency code").max(3).toUpperCase(),
   timezone: timeZoneSchema,
+  locale: localeSchema,
 });
 export type ProvisionChurchValues = z.infer<typeof provisionChurchSchema>;
 
@@ -88,6 +95,7 @@ export const churchSettingsSchema = z.object({
   name: z.string().min(1, "Church name is required"),
   currency_code: z.string().min(3, "Use a 3-letter currency code").max(3).toUpperCase(),
   timezone: timeZoneSchema,
+  locale_code: localeSchema,
   reporting_year_start_month: z.coerce.number().int().min(1).max(12),
   finance_requires_independent_verification: z.boolean().default(true),
 });
