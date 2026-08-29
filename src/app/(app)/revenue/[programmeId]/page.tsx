@@ -23,9 +23,13 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
     .eq("id", programme.church_id)
     .single();
 
-  const [categories, entries, { data: signoffsData }] = await Promise.all([
-    listActiveCategories(programme.service_type_id),
-    getRevenueForProgramme(programmeId),
+  const entries = await getRevenueForProgramme(programmeId);
+  const [categories, { data: signoffsData }] = await Promise.all([
+    listActiveCategories(
+      programme.service_type_id,
+      programme.programme_date,
+      entries.map((entry) => entry.category_id)
+    ),
     supabase
       .from("signoffs")
       .select("*, app_users(full_name)")
