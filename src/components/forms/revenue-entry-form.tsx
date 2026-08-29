@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  saveRevenueEntries,
-  submitFinanceAction,
+  saveFinanceEntrySetAction,
   verifyFinanceAction,
   returnFinanceAction,
   reopenFinanceAction,
@@ -82,8 +81,13 @@ export function RevenueEntryForm({
     }));
   }
 
-  async function persistEntries() {
-    await saveRevenueEntries(programmeId, currentEntries());
+  async function persistEntries(submit: boolean) {
+    await saveFinanceEntrySetAction(
+      programmeId,
+      financeVersion,
+      currentEntries(),
+      submit
+    );
   }
 
   async function handleSave() {
@@ -91,7 +95,7 @@ export function RevenueEntryForm({
     setError(null);
     setNotice(null);
     try {
-      await persistEntries();
+      await persistEntries(false);
       setNotice("Offering amounts saved.");
       router.refresh();
     } catch (e) {
@@ -106,9 +110,7 @@ export function RevenueEntryForm({
     setError(null);
     setNotice(null);
     try {
-      // Save first, but do not swallow a save error and submit stale values.
-      await persistEntries();
-      await submitFinanceAction(programmeId, financeVersion);
+      await persistEntries(true);
       setNotice("Finance record signed and submitted for verification.");
       router.refresh();
     } catch (e) {
