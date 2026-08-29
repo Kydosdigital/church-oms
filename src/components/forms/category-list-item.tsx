@@ -11,10 +11,12 @@ import type { OfferingCategory, FundraisingProject } from "@/types/domain";
 export function CategoryListItem({
   category,
   currencyCode,
+  localeCode,
   cumulativeReceived,
 }: {
   category: OfferingCategory & { fundraising_projects: FundraisingProject[] };
   currencyCode: string;
+  localeCode: string;
   cumulativeReceived?: number;
 }) {
   const router = useRouter();
@@ -52,7 +54,7 @@ export function CategoryListItem({
           <p className="text-xs text-muted mt-1">
             {project.target_amount ? (
               <>
-                Target {formatCurrency(project.target_amount, currencyCode)} · {formatPercent(progress)} achieved
+                Target {formatCurrency(project.target_amount, currencyCode, localeCode)} · {formatPercent(progress)} achieved
               </>
             ) : (
               "No target set"

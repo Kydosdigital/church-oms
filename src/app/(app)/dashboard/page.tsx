@@ -22,7 +22,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   const { data: church } = ctx?.user.church_id
     ? await supabase
         .from("churches")
-        .select("currency_code, reporting_year_start_month")
+        .select("currency_code, locale_code, reporting_year_start_month")
         .eq("id", ctx.user.church_id)
         .single()
     : { data: null };
@@ -33,6 +33,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
   );
   const range = { from, to };
   const currencyCode = church?.currency_code ?? "GBP";
+  const localeCode = church?.locale_code ?? "en-GB";
 
   const [attendance, pending, projects] = await Promise.all([
     getAttendanceTrend(range),
@@ -121,17 +122,17 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <p className="text-sm text-muted">Total physical giving</p>
-              <p className="text-2xl font-semibold mt-1">{formatCurrency(totalPhysical, currencyCode)}</p>
+              <p className="text-2xl font-semibold mt-1">{formatCurrency(totalPhysical, currencyCode, localeCode)}</p>
               <p className="text-xs text-muted mt-1">{formatPercent(physicalPercent)} of total</p>
             </Card>
             <Card>
               <p className="text-sm text-muted">Total online giving</p>
-              <p className="text-2xl font-semibold mt-1">{formatCurrency(totalOnline, currencyCode)}</p>
+              <p className="text-2xl font-semibold mt-1">{formatCurrency(totalOnline, currencyCode, localeCode)}</p>
               <p className="text-xs text-muted mt-1">{formatPercent(onlinePercent)} of total</p>
             </Card>
             <Card className="sm:col-span-2">
               <p className="text-sm text-muted">Combined giving</p>
-              <p className="text-2xl font-semibold mt-1">{formatCurrency(totalCombined, currencyCode)}</p>
+              <p className="text-2xl font-semibold mt-1">{formatCurrency(totalCombined, currencyCode, localeCode)}</p>
               <p className="text-xs text-muted mt-1">Physical + online, verified entries in this period</p>
             </Card>
           </div>
@@ -141,7 +142,11 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
               <CardTitle>Revenue by category</CardTitle>
               <CardDescription>Verified offerings, stacked by category.</CardDescription>
             </CardHeader>
-            <RevenueChart data={revenue} currencyCode={currencyCode} />
+            <RevenueChart
+              data={revenue}
+              currencyCode={currencyCode}
+              localeCode={localeCode}
+            />
           </Card>
         </>
       )}
@@ -158,9 +163,9 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 <div className="flex justify-between text-sm mb-1">
                   <span className="font-medium">{project.name}</span>
                   <span className="text-muted">
-                    {formatCurrency(project.cumulative_received, currencyCode)}
+                    {formatCurrency(project.cumulative_received, currencyCode, localeCode)}
                     {project.target_amount
-                      ? ` of ${formatCurrency(project.target_amount, currencyCode)}`
+                      ? ` of ${formatCurrency(project.target_amount, currencyCode, localeCode)}`
                       : ""}
                     {" · "}
                     {formatPercent(project.percent_achieved)}

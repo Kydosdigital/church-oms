@@ -365,6 +365,7 @@ export async function updateChurchSettings(input: ChurchSettingsValues) {
       name: input.name,
       currency_code: input.currency_code,
       timezone: input.timezone,
+      locale_code: input.locale_code,
       reporting_year_start_month: input.reporting_year_start_month,
       finance_requires_independent_verification: input.finance_requires_independent_verification,
     })

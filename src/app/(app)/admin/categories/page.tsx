@@ -26,10 +26,11 @@ export default async function CategoriesAdminPage() {
 
   const { data: churchRow } = await supabase
     .from("churches")
-    .select("currency_code")
+    .select("currency_code, locale_code")
     .limit(1)
     .single();
   const currencyCode = churchRow?.currency_code ?? "GBP";
+  const localeCode = churchRow?.locale_code ?? "en-GB";
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-3xl">
@@ -63,6 +64,7 @@ export default async function CategoriesAdminPage() {
               key={category.id}
               category={category}
               currencyCode={currencyCode}
+              localeCode={localeCode}
               cumulativeReceived={cumulativeByCategory[category.id]}
             />
           ))}
@@ -86,6 +88,7 @@ export default async function CategoriesAdminPage() {
                 key={category.id}
                 category={category}
                 currencyCode={currencyCode}
+                localeCode={localeCode}
                 cumulativeReceived={cumulativeByCategory[category.id]}
               />
             ))}

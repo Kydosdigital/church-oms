@@ -37,6 +37,7 @@ export async function provisionChurch(
     name: formData.get("name"),
     currency: formData.get("currency"),
     timezone: formData.get("timezone"),
+    locale: formData.get("locale"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Check the form and try again." };
@@ -55,6 +56,7 @@ export async function provisionChurch(
       p_name: parsed.data.name,
       p_currency: parsed.data.currency,
       p_timezone: parsed.data.timezone,
+      p_locale: parsed.data.locale,
     }
   );
 

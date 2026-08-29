@@ -9,6 +9,7 @@ import { updateChurchSettings } from "@/lib/data/admin";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import type { Church } from "@/types/domain";
+import type { LocaleOption } from "@/lib/locales";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -18,9 +19,11 @@ const MONTHS = [
 export function ChurchSettingsForm({
   church,
   timeZones,
+  localeOptions,
 }: {
   church: Church;
   timeZones: string[];
+  localeOptions: LocaleOption[];
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +40,7 @@ export function ChurchSettingsForm({
       name: church.name,
       currency_code: church.currency_code,
       timezone: church.timezone,
+      locale_code: church.locale_code,
       reporting_year_start_month: church.reporting_year_start_month,
       finance_requires_independent_verification: church.finance_requires_independent_verification,
     },
@@ -86,6 +90,25 @@ export function ChurchSettingsForm({
           </select>
           <FieldError>{errors.timezone?.message}</FieldError>
         </div>
+      </div>
+
+      <div>
+        <Label htmlFor="locale_code">Regional date &amp; number format</Label>
+        <select
+          id="locale_code"
+          {...register("locale_code")}
+          className="block w-full rounded-brand border border-surface-border bg-background h-11 px-3"
+        >
+          {localeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-muted mt-1">
+          Controls date order, separators and currency/number formatting across church reports.
+        </p>
+        <FieldError>{errors.locale_code?.message}</FieldError>
       </div>
 
       <div>

@@ -2,11 +2,25 @@ import Link from "next/link";
 import { listProgrammes } from "@/lib/data/programmes";
 import { StateBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getCurrentUserContext } from "@/lib/data/current-user";
+import { createClient } from "@/lib/supabase/server";
+import { formatChurchDate } from "@/lib/locales";
 
 export default async function ProgrammesPage(props: PageProps<"/programmes">) {
   const searchParams = await props.searchParams;
   const rawReview = Array.isArray(searchParams.review) ? searchParams.review[0] : searchParams.review;
   const review = rawReview === "attendance" || rawReview === "finance" ? rawReview : undefined;
+
+  const ctx = await getCurrentUserContext();
+  const supabase = await createClient();
+  const { data: church } = ctx?.user.church_id
+    ? await supabase
+        .from("churches")
+        .select("locale_code")
+        .eq("id", ctx.user.church_id)
+        .single()
+    : { data: null };
+  const localeCode = church?.locale_code ?? "en-GB";
 
   const programmes = await listProgrammes(
     undefined,
@@ -69,10 +83,10 @@ export default async function ProgrammesPage(props: PageProps<"/programmes">) {
             <div className="min-w-0">
               <p className="font-medium truncate">{programme.programme_name}</p>
               <p className="text-sm text-muted">
-                {programme.programme_date} ·{" "}
+                {formatChurchDate(programme.programme_date, localeCode)} ·{" "}
                 {programme.classification === "routine" ? "Routine" : "Special event"}
                 {programme.attendance_records?.[0]?.total_attendance != null &&
-                  ` · ${programme.attendance_records[0].total_attendance} attended`}
+                  ` · ${programme.attendance_records[0].total_attendance.toLocaleString(localeCode)} attended`}
               </p>
             </div>
             <div className="shrink-0 text-right">

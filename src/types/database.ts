@@ -351,6 +351,7 @@ export type Database = {
           currency_code: string
           finance_requires_independent_verification: boolean
           id: string
+          locale_code: string
           name: string
           reporting_year_start_month: number
           timezone: string
@@ -361,6 +362,7 @@ export type Database = {
           currency_code?: string
           finance_requires_independent_verification?: boolean
           id?: string
+          locale_code?: string
           name: string
           reporting_year_start_month?: number
           timezone?: string
@@ -371,6 +373,7 @@ export type Database = {
           currency_code?: string
           finance_requires_independent_verification?: boolean
           id?: string
+          locale_code?: string
           name?: string
           reporting_year_start_month?: number
           timezone?: string
@@ -953,15 +956,26 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: number
       }
-      complete_church_onboarding: {
-        Args: {
-          p_currency?: string
-          p_name: string
-          p_timezone?: string
-          p_user_id: string
-        }
-        Returns: string
-      }
+      complete_church_onboarding:
+        | {
+            Args: {
+              p_currency?: string
+              p_name: string
+              p_timezone?: string
+              p_user_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_currency: string
+              p_locale: string
+              p_name: string
+              p_timezone: string
+              p_user_id: string
+            }
+            Returns: string
+          }
       current_church_id: { Args: never; Returns: string }
       has_finance_history_permission: {
         Args: { p_branch_id?: string }

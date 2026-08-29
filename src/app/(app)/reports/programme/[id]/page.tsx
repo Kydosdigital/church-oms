@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getProgramme } from "@/lib/data/programmes";
 import { createClient } from "@/lib/supabase/server";
+import { formatChurchDate, formatChurchDateTime } from "@/lib/locales";
 import type { Signoff } from "@/types/domain";
 
 export default async function ProgrammeReportPage(props: PageProps<"/reports/programme/[id]">) {
@@ -10,17 +11,30 @@ export default async function ProgrammeReportPage(props: PageProps<"/reports/pro
   const { programme, attendance } = result;
 
   const supabase = await createClient();
-  const { data: signoffsData } = await supabase
-    .from("signoffs")
-    .select("*, app_users(full_name)")
-    .eq("programme_id", id)
-    .order("created_at");
+  const [{ data: signoffsData }, { data: church }] = await Promise.all([
+    supabase
+      .from("signoffs")
+      .select("*, app_users(full_name)")
+      .eq("programme_id", id)
+      .order("created_at"),
+    supabase
+      .from("churches")
+      .select("timezone, locale_code")
+      .eq("id", programme.church_id)
+      .single(),
+  ]);
   const signoffs = (signoffsData ?? []) as (Signoff & { app_users: { full_name: string } | null })[];
 
   const submit = signoffs.find((s) => s.action === "submit" && s.record_kind === "attendance");
   const verify = signoffs.find((s) => s.action === "verify" && s.record_kind === "attendance");
 
-  const generatedAt = new Date().toLocaleString();
+  const localeCode = church?.locale_code ?? "en-GB";
+  const timeZone = church?.timezone ?? "UTC";
+  const generatedAt = formatChurchDateTime(
+    new Date().toISOString(),
+    localeCode,
+    timeZone
+  );
 
   return (
     <div className="p-8 max-w-2xl mx-auto print:p-0 bg-background text-foreground">
@@ -34,7 +48,9 @@ export default async function ProgrammeReportPage(props: PageProps<"/reports/pro
       </div>
 
       <h1 className="text-xl font-semibold">{programme.programme_name}</h1>
-      <p className="text-sm text-muted">{programme.programme_date}</p>
+      <p className="text-sm text-muted">
+        {formatChurchDate(programme.programme_date, localeCode)}
+      </p>
 
       <section className="mt-6">
         <h2 className="font-semibold mb-2">Attendance</h2>
@@ -73,11 +89,15 @@ export default async function ProgrammeReportPage(props: PageProps<"/reports/pro
         <h2 className="font-semibold mb-2">Sign-offs</h2>
         <p className="text-sm">
           Submitted by <strong>{submit?.app_users?.full_name ?? "—"}</strong>
-          {submit ? ` on ${new Date(submit.created_at).toLocaleString()}` : ""}
+          {submit
+            ? " on " + formatChurchDateTime(submit.created_at, localeCode, timeZone)
+            : ""}
         </p>
         <p className="text-sm">
           Verified by <strong>{verify?.app_users?.full_name ?? "Not yet verified"}</strong>
-          {verify ? ` on ${new Date(verify.created_at).toLocaleString()}` : ""}
+          {verify
+            ? " on " + formatChurchDateTime(verify.created_at, localeCode, timeZone)
+            : ""}
         </p>
       </section>
 

@@ -14,8 +14,8 @@ import {
 import { formatCurrency } from "@/lib/calculations";
 import type { AttendanceGivingPoint } from "@/lib/data/reports";
 
-function shortDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
+function shortDate(value: string, localeCode: string) {
+  return new Intl.DateTimeFormat(localeCode, {
     day: "2-digit",
     month: "short",
   }).format(new Date(value + "T12:00:00"));
@@ -24,9 +24,11 @@ function shortDate(value: string) {
 export function AttendanceGivingChart({
   data,
   currencyCode,
+  localeCode,
 }: {
   data: AttendanceGivingPoint[];
   currencyCode: string;
+  localeCode: string;
 }) {
   if (data.length === 0) {
     return (
@@ -44,7 +46,7 @@ export function AttendanceGivingChart({
           <XAxis
             dataKey="programme_date"
             tick={{ fontSize: 11 }}
-            tickFormatter={shortDate}
+            tickFormatter={(value) => shortDate(String(value), localeCode)}
             minTickGap={20}
           />
           <YAxis
@@ -63,18 +65,18 @@ export function AttendanceGivingChart({
             orientation="right"
             tick={{ fontSize: 12 }}
             tickFormatter={(value) =>
-              new Intl.NumberFormat("en-GB", {
+              new Intl.NumberFormat(localeCode, {
                 notation: "compact",
                 maximumFractionDigits: 1,
               }).format(Number(value))
             }
           />
           <Tooltip
-            labelFormatter={(value) => shortDate(String(value))}
+            labelFormatter={(value) => shortDate(String(value), localeCode)}
             formatter={(value, name) => {
               const numeric = Number(value);
-              if (name === "Giving") return [formatCurrency(numeric, currencyCode), name];
-              return [numeric.toLocaleString("en-GB"), name];
+              if (name === "Giving") return [formatCurrency(numeric, currencyCode, localeCode), name];
+              return [numeric.toLocaleString(localeCode), name];
             }}
           />
           <Legend />
@@ -116,11 +118,11 @@ export function AttendanceGivingChart({
               <td>{point.programme_date}</td>
               <td>{point.programme_name}</td>
               <td>{point.total_attendance}</td>
-              <td>{formatCurrency(point.total_giving, currencyCode)}</td>
+              <td>{formatCurrency(point.total_giving, currencyCode, localeCode)}</td>
               <td>
                 {point.giving_per_attendee === null
                   ? "N/A"
-                  : formatCurrency(point.giving_per_attendee, currencyCode)}
+                  : formatCurrency(point.giving_per_attendee, currencyCode, localeCode)}
               </td>
             </tr>
           ))}

@@ -2,6 +2,7 @@ import { getChurchSettings } from "@/lib/data/admin";
 import { Card, CardDescription } from "@/components/ui/card";
 import { ChurchSettingsForm } from "@/components/forms/church-settings-form";
 import { getSupportedTimeZones } from "@/lib/timezones";
+import { getLocaleOptions } from "@/lib/locales";
 
 export default async function ChurchSettingsPage() {
   const church = await getChurchSettings();
@@ -22,12 +23,16 @@ export default async function ChurchSettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Church settings</h1>
         <p className="text-sm text-muted">
-          These apply church-wide: currency and timezone shape how dates/amounts render, the
-          reporting year start month shapes year-to-date figures, and independent verification
+          These apply church-wide: currency, timezone and regional format shape how dates and
+          amounts render, the reporting year start month shapes year-to-date figures, and independent verification
           controls whether finance records need a second sign-off before they lock.
         </p>
       </div>
-      <ChurchSettingsForm church={church} timeZones={getSupportedTimeZones(church.timezone)} />
+      <ChurchSettingsForm
+        church={church}
+        timeZones={getSupportedTimeZones(church.timezone)}
+        localeOptions={getLocaleOptions(church.locale_code)}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { VerificationActions } from "@/components/forms/verification-actions";
 import { capacityUtilization, formatPercent } from "@/lib/calculations";
 import { SignoffTimeline } from "@/components/workflow/signoff-timeline";
+import { formatChurchDate } from "@/lib/locales";
 import type { Signoff } from "@/types/domain";
 
 export default async function ProgrammeDetailPage(props: PageProps<"/programmes/[id]">) {
@@ -28,7 +29,7 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
       .order("created_at"),
     supabase
       .from("churches")
-      .select("timezone")
+      .select("timezone, locale_code")
       .eq("id", programme.church_id)
       .single(),
   ]);
@@ -67,7 +68,9 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">{programme.programme_name}</h1>
-          <p className="text-sm text-muted">{programme.programme_date}</p>
+          <p className="text-sm text-muted">
+            {formatChurchDate(programme.programme_date, church?.locale_code ?? "en-GB")}
+          </p>
         </div>
         <StateBadge state={programme.state} />
       </div>
@@ -173,6 +176,7 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
           <SignoffTimeline
             signoffs={signoffs}
             timeZone={church?.timezone ?? "UTC"}
+            locale={church?.locale_code ?? "en-GB"}
             emptyMessage="This attendance record has not been digitally signed yet."
           />
         </div>

@@ -4,6 +4,8 @@ import { getProgramme } from "@/lib/data/programmes";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { getLiveCounterForProgramme } from "@/lib/data/live-counter";
 import { LiveCounter } from "@/components/attendance/live-counter";
+import { createClient } from "@/lib/supabase/server";
+import { formatChurchDate } from "@/lib/locales";
 
 export default async function ProgrammeCounterPage(props: PageProps<"/programmes/[id]/counter">) {
   const { id } = await props.params;
@@ -17,6 +19,14 @@ export default async function ProgrammeCounterPage(props: PageProps<"/programmes
   if (!ctx) redirect("/login");
 
   const { programme, attendance } = result;
+  const supabase = await createClient();
+  const { data: church } = await supabase
+    .from("churches")
+    .select("locale_code")
+    .eq("id", programme.church_id)
+    .single();
+  const localeCode = church?.locale_code ?? "en-GB";
+
   const isAdministrator = ctx.permissions.isAdministrator();
   const canCount = ctx.permissions.hasRole("usher", programme.branch_id) || isAdministrator;
   const canVerify = ctx.permissions.canVerifyAttendance(programme.branch_id);
@@ -36,7 +46,12 @@ export default async function ProgrammeCounterPage(props: PageProps<"/programmes
       <LiveCounter
         programmeId={programme.id}
         programmeName={programme.programme_name}
-        programmeDate={programme.programme_date}
+        programmeDate={formatChurchDate(programme.programme_date, localeCode, {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })}
         currentUserId={ctx.user.id}
         currentUserName={ctx.user.full_name}
         recordedAttendanceTotal={attendance.total_attendance}

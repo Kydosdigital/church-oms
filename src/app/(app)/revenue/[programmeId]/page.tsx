@@ -6,6 +6,7 @@ import { listActiveCategories, getRevenueForProgramme } from "@/lib/data/revenue
 import { RevenueEntryForm } from "@/components/forms/revenue-entry-form";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SignoffTimeline } from "@/components/workflow/signoff-timeline";
+import { formatChurchDate } from "@/lib/locales";
 import type { Signoff } from "@/types/domain";
 
 export default async function RevenueEntryPage(props: PageProps<"/revenue/[programmeId]">) {
@@ -18,7 +19,7 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
   const supabase = await createClient();
   const { data: church } = await supabase
     .from("churches")
-    .select("currency_code, timezone")
+    .select("currency_code, timezone, locale_code")
     .eq("id", programme.church_id)
     .single();
 
@@ -44,7 +45,9 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
     <div className="p-4 sm:p-6 max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold mb-1">{programme.programme_name}</h1>
-        <p className="text-sm text-muted">{programme.programme_date}</p>
+        <p className="text-sm text-muted">
+          {formatChurchDate(programme.programme_date, church?.locale_code ?? "en-GB")}
+        </p>
       </div>
 
       <RevenueEntryForm
@@ -54,6 +57,7 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
         financeState={programme.finance_state}
         financeVersion={programme.finance_version}
         currencyCode={church?.currency_code ?? "GBP"}
+        localeCode={church?.locale_code ?? "en-GB"}
         canEnter={ctx?.permissions.canEnterFinance(programme.branch_id) ?? false}
         canVerify={ctx?.permissions.canVerifyFinance(programme.branch_id) ?? false}
         canReopen={
@@ -74,6 +78,7 @@ export default async function RevenueEntryPage(props: PageProps<"/revenue/[progr
         <SignoffTimeline
           signoffs={signoffs}
           timeZone={church?.timezone ?? "UTC"}
+          locale={church?.locale_code ?? "en-GB"}
           emptyMessage="This finance record has not been digitally signed yet."
         />
       </Card>
