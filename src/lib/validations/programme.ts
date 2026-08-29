@@ -72,6 +72,45 @@ export const programmeEntrySchema = serviceDetailsSchema
     }
   });
 
+export const programmeCorrectionSchema = z
+  .object({
+    programme_name: z.string().min(1, "Programme name is required"),
+    classification: z.enum(["routine", "special_event"]),
+    preacher_type: z.enum(["none", "existing", "guest"]).default("none"),
+    preacher_id: optionalUuid,
+    guest_preacher_name: z
+      .string()
+      .trim()
+      .max(120, "Guest preacher name is too long")
+      .optional(),
+    sermon_topic: z.string().optional(),
+  })
+  .merge(attendanceSchema)
+  .merge(notesSchema)
+  .superRefine((values, ctx) => {
+    if (values.preacher_type === "existing" && !values.preacher_id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["preacher_id"],
+        message: "Select the preacher",
+      });
+    }
+    if (
+      values.preacher_type === "guest" &&
+      !values.guest_preacher_name?.trim()
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["guest_preacher_name"],
+        message: "Enter the guest preacher's name",
+      });
+    }
+  });
+
+export type ProgrammeCorrectionValues = z.infer<
+  typeof programmeCorrectionSchema
+>;
+
 export type ProgrammeEntryValues = z.infer<typeof programmeEntrySchema>;
 export type ServiceDetailsValues = z.infer<typeof serviceDetailsSchema>;
 export type AttendanceValues = z.infer<typeof attendanceSchema>;
