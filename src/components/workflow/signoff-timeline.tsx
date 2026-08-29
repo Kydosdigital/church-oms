@@ -1,3 +1,4 @@
+import { formatChurchDateTime } from "@/lib/locales";
 import type { Signoff } from "@/types/domain";
 
 export type SignoffTimelineItem = Signoff & {
@@ -11,29 +12,15 @@ const ACTION_LABELS: Record<Signoff["action"], string> = {
   reopen: "Reopened",
 };
 
-function formatSignoffTime(value: string, timeZone: string) {
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone,
-      timeZoneName: "short",
-    }).format(new Date(value));
-  } catch {
-    return new Date(value).toISOString();
-  }
-}
-
 export function SignoffTimeline({
   signoffs,
   timeZone,
+  locale,
   emptyMessage = "No digital sign-off has been recorded yet.",
 }: {
   signoffs: SignoffTimelineItem[];
   timeZone: string;
+  locale: string;
   emptyMessage?: string;
 }) {
   if (signoffs.length === 0) {
@@ -59,7 +46,7 @@ export function SignoffTimeline({
             </span>
           </div>
           <p className="mt-1 text-xs text-muted">
-            {formatSignoffTime(signoff.created_at, timeZone)}
+            {formatChurchDateTime(signoff.created_at, locale, timeZone)}
           </p>
           {signoff.reason && (
             <p className="mt-2 text-sm">
