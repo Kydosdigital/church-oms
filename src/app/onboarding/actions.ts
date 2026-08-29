@@ -44,49 +44,26 @@ export async function provisionChurch(
 
   const admin = createAdminClient();
 
-  const { data: churchId, error: provisionError } = await admin.rpc("provision_new_church", {
-    p_name: parsed.data.name,
-    p_currency: parsed.data.currency,
-    p_timezone: parsed.data.timezone,
-  });
-  if (provisionError || !churchId) {
-    return { error: provisionError?.message ?? "Could not set up the church. Try again." };
-  }
+  // One server-only database transaction now owns the entire first-run setup:
+  // church defaults, owner attachment, Administrator role and Super Admin role.
+  // If any one of those steps fails, PostgreSQL rolls the whole onboarding back
+  // so the user cannot be stranded in a half-created church.
+  const { data: churchId, error: onboardingError } = await admin.rpc(
+    "complete_church_onboarding",
+    {
+      p_user_id: user.id,
+      p_name: parsed.data.name,
+      p_currency: parsed.data.currency,
+      p_timezone: parsed.data.timezone,
+    }
+  );
 
-  const { error: userError } = await admin
-    .from("app_users")
-    .update({ church_id: churchId })
-    .eq("id", user.id);
-  if (userError) {
-    return { error: userError.message };
-  }
-
-  // Super Admin is the highest authority inside this church. It is always
-  // church-wide and carries full finance visibility. We also keep the normal
-  // Administrator companion role so existing admin server checks continue to
-  // work while Super Admin remains a strict superset.
-  const { error: adminRoleError } = await admin.from("user_roles").insert({
-    user_id: user.id,
-    role: "administrator",
-    branch_id: null,
-    finance_permission: false,
-    finance_history_permission: false,
-  });
-  if (adminRoleError) {
-    return { error: adminRoleError.message };
-  }
-
-  // `src/types/database.ts` is generated and may briefly lag a newly applied
-  // enum migration. PostgreSQL already validates this value at runtime.
-  const { error: superAdminRoleError } = await admin.from("user_roles").insert({
-    user_id: user.id,
-    role: "super_admin" as never,
-    branch_id: null,
-    finance_permission: true,
-    finance_history_permission: true,
-  });
-  if (superAdminRoleError) {
-    return { error: superAdminRoleError.message };
+  if (onboardingError || !churchId) {
+    return {
+      error:
+        onboardingError?.message ??
+        "Could not set up the church. Nothing was partially created, so you can safely try again.",
+    };
   }
 
   redirect("/dashboard");
