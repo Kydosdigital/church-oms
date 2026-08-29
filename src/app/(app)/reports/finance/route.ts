@@ -2,6 +2,8 @@ import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { toCsv } from "@/lib/csv";
 import { toXlsx } from "@/lib/xlsx";
+import { getCurrentUserContext } from "@/lib/data/current-user";
+import { parseReportExportRange } from "@/lib/report-export-range";
 
 interface FinanceExportRow {
   physical_amount: number;
@@ -17,19 +19,44 @@ interface FinanceExportRow {
   } | null;
 }
 
-/** Finance export — REV-08 / 12.3: only a finance-authorized user can generate
- * this. Enforced by RLS (revenue_select policy requires has_finance_permission()),
- * not by any check in this route — an unpermitted user simply gets zero rows. */
+/** Finance export — REV-08 / 12.3: historical exports require the explicit
+ * finance-history permission. RLS still limits the rows, while this route-level
+ * check prevents a current-service finance user from bypassing the UI by
+ * requesting the export URL directly. */
 export async function GET(request: NextRequest) {
   const format = request.nextUrl.searchParams.get("format");
+  const ctx = await getCurrentUserContext();
+
+  if (!ctx) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  if (!ctx.permissions.hasFinanceHistoryPermission()) {
+    return new Response("Past-finance permission required", { status: 403 });
+  }
+
+  const { range, error: rangeError } = parseReportExportRange(
+    request.nextUrl.searchParams
+  );
+  if (rangeError) {
+    return new Response(rangeError, { status: 400 });
+  }
+
   const supabase = await createClient();
 
-  const { data } = await supabase
+  let query = supabase
     .from("revenue_entries")
     .select(
-      "physical_amount, online_amount, category_total, state, notes, offering_categories(name, category_type), programme_occurrences(programme_date, programme_name, branches(name))"
+      "physical_amount, online_amount, category_total, state, notes, offering_categories(name, category_type), programme_occurrences!inner(programme_date, programme_name, branches(name))"
     )
     .order("created_at", { ascending: false });
+
+  if (range.from && range.to) {
+    query = query
+      .gte("programme_occurrences.programme_date", range.from)
+      .lte("programme_occurrences.programme_date", range.to);
+  }
+
+  const { data } = await query;
 
   const rows = ((data ?? []) as unknown as FinanceExportRow[]).map((r) => ({
     date: r.programme_occurrences?.programme_date,

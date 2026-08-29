@@ -60,6 +60,13 @@ export function projectProgressPercent(cumulativeReceived: number, target: numbe
   return (cumulativeReceived / target) * 100;
 }
 
+/** Giving per attendee for a verified service. Returns null when attendance is
+ * zero so reports show N/A rather than an invalid/infinite value. */
+export function givingPerAttendee(totalGiving: number, totalAttendance: number): number | null {
+  if (totalAttendance <= 0) return null;
+  return totalGiving / totalAttendance;
+}
+
 export function formatCurrency(amount: number, currencyCode: string, locale = "en-US"): string {
   return new Intl.NumberFormat(locale, { style: "currency", currency: currencyCode }).format(amount);
 }
