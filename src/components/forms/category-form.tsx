@@ -30,6 +30,7 @@ export function CategoryForm({ serviceTypes }: { serviceTypes: ServiceType[] }) 
       category_type: "general",
       applies_to_all_service_types: true,
       service_type_ids: [],
+      accepting_entries_after_end_override: false,
     },
   });
 
@@ -146,6 +147,26 @@ export function CategoryForm({ serviceTypes }: { serviceTypes: ServiceType[] }) 
             <Label htmlFor="end_date">End date</Label>
             <Input id="end_date" type="date" {...register("end_date")} />
             <FieldError>{errors.end_date?.message}</FieldError>
+          </div>
+
+          <div className="sm:col-span-3 rounded-brand border border-warning/30 bg-warning/5 p-3">
+            <label className="flex items-start gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4"
+                {...register("accepting_entries_after_end_override")}
+              />
+              <span>
+                Allow new entries after the project end date
+                <span className="mt-1 block text-xs font-normal text-muted">
+                  Administrator override. Use only when this project is intentionally continuing
+                  beyond its configured end date. Changes are recorded in the audit log.
+                </span>
+              </span>
+            </label>
+            <FieldError>
+              {errors.accepting_entries_after_end_override?.message}
+            </FieldError>
           </div>
         </div>
       )}
