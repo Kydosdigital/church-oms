@@ -8,7 +8,7 @@ import {
   outcomesExceedAttendance,
 } from "@/lib/calculations";
 import type { ProgrammeEntryValues } from "@/lib/validations/programme";
-import type { ProgrammeOccurrence, AttendanceRecord } from "@/types/domain";
+import type { ProgrammeOccurrence, AttendanceRecord, RecordState } from "@/types/domain";
 
 export interface ProgrammeWithAttendance {
   programme: ProgrammeOccurrence;
@@ -37,14 +37,21 @@ export type ProgrammeListRow = ProgrammeOccurrence & {
   attendance_records: { total_attendance: number }[];
 };
 
-export async function listProgrammes(branchId?: string): Promise<ProgrammeListRow[]> {
+export async function listProgrammes(
+  branchId?: string,
+  filters: { attendanceState?: RecordState; financeState?: RecordState } = {}
+): Promise<ProgrammeListRow[]> {
   const supabase = await createClient();
   let query = supabase
     .from("programme_occurrences")
     .select("*, attendance_records(total_attendance)")
     .order("programme_date", { ascending: false })
     .limit(50);
+
   if (branchId) query = query.eq("branch_id", branchId);
+  if (filters.attendanceState) query = query.eq("state", filters.attendanceState);
+  if (filters.financeState) query = query.eq("finance_state", filters.financeState);
+
   const { data } = await query;
   return (data ?? []) as unknown as ProgrammeListRow[];
 }

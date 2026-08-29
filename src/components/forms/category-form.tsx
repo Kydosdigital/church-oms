@@ -12,6 +12,7 @@ import { Input, Label, Textarea, FieldError } from "@/components/ui/input";
 export function CategoryForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const {
     register,
@@ -33,9 +34,11 @@ export function CategoryForm() {
   async function onSubmit(data: OfferingCategoryValues) {
     setPending(true);
     setError(null);
+    setNotice(null);
     try {
       await createOfferingCategory(data);
       reset();
+      setNotice("Offering category created.");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create category");
@@ -80,8 +83,13 @@ export function CategoryForm() {
           </div>
         </div>
       )}
-      {error && <p className="text-sm text-danger">{error}</p>}
-      <Button type="submit" disabled={pending}>{pending ? "Creating…" : "Create category"}</Button>
+      <div aria-live="polite">
+        {error && <p className="text-sm text-danger">{error}</p>}
+        {notice && !error && <p className="text-sm text-brand">{notice}</p>}
+      </div>
+      <Button type="submit" disabled={pending}>
+        {pending ? "Creating category…" : "Create category"}
+      </Button>
     </form>
   );
 }

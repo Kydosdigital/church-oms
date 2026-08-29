@@ -166,7 +166,10 @@ export async function getPendingApprovals(): Promise<PendingApprovalSummary> {
 
   const [{ count: attendancePending }, { count: financePending }] = await Promise.all([
     supabase.from("programme_occurrences").select("id", { count: "exact", head: true }).eq("state", "submitted"),
-    supabase.from("revenue_entries").select("id", { count: "exact", head: true }).eq("state", "submitted"),
+    supabase
+      .from("programme_occurrences")
+      .select("id", { count: "exact", head: true })
+      .eq("finance_state", "submitted"),
   ]);
 
   return {

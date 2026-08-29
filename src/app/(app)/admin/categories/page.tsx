@@ -5,47 +5,93 @@ import { CategoryListItem } from "@/components/forms/category-list-item";
 
 export default async function CategoriesAdminPage() {
   const categories = await listAllCategories();
+  const activeCategories = categories.filter((category) => category.active);
+  const inactiveCategories = categories.filter((category) => !category.active);
   const supabase = await createClient();
 
   const cumulativeByCategory: Record<string, number> = {};
-  for (const cat of categories) {
-    if (cat.category_type !== "project") continue;
+  for (const category of categories) {
+    if (category.category_type !== "project") continue;
     const { data: entries } = await supabase
       .from("revenue_entries")
       .select("category_total")
-      .eq("category_id", cat.id)
+      .eq("category_id", category.id)
       .eq("state", "verified");
-    cumulativeByCategory[cat.id] = (entries ?? []).reduce(
-      (s: number, e: { category_total: number | null }) => s + Number(e.category_total ?? 0),
+    cumulativeByCategory[category.id] = (entries ?? []).reduce(
+      (sum: number, entry: { category_total: number | null }) =>
+        sum + Number(entry.category_total ?? 0),
       0
     );
   }
 
-  const { data: churchRow } = await supabase.from("churches").select("currency_code").limit(1).single();
-  const currencyCode = churchRow?.currency_code ?? "USD";
+  const { data: churchRow } = await supabase
+    .from("churches")
+    .select("currency_code")
+    .limit(1)
+    .single();
+  const currencyCode = churchRow?.currency_code ?? "GBP";
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-semibold">Offering categories</h1>
         <p className="text-sm text-muted">
-          Categories are configurable records (CFG-01) — add or retire them without a software
-          release. A used category cannot be deleted, only deactivated (CFG-04).
+          Categories are configurable records. Used categories are retired rather than deleted so
+          historic finance reports keep their original meaning.
         </p>
       </div>
 
       <CategoryForm />
 
-      <div className="divide-y divide-surface-border rounded-brand border border-surface-border overflow-hidden">
-        {categories.map((cat) => (
-          <CategoryListItem
-            key={cat.id}
-            category={cat}
-            currencyCode={currencyCode}
-            cumulativeReceived={cumulativeByCategory[cat.id]}
-          />
-        ))}
-      </div>
+      <section className="space-y-2">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Active categories</h2>
+            <p className="text-xs text-muted">These appear when entering offerings for a programme.</p>
+          </div>
+          <span className="text-xs text-muted">{activeCategories.length} active</span>
+        </div>
+
+        <div className="divide-y divide-surface-border rounded-brand border border-surface-border overflow-hidden">
+          {activeCategories.length === 0 && (
+            <p className="p-5 text-sm text-muted">
+              No active categories. Create one above or reactivate an archived category.
+            </p>
+          )}
+          {activeCategories.map((category) => (
+            <CategoryListItem
+              key={category.id}
+              category={category}
+              currencyCode={currencyCode}
+              cumulativeReceived={cumulativeByCategory[category.id]}
+            />
+          ))}
+        </div>
+      </section>
+
+      {inactiveCategories.length > 0 && (
+        <details className="rounded-brand border border-surface-border bg-surface">
+          <summary className="cursor-pointer list-none px-4 py-3 font-medium">
+            <span>Inactive / archived categories</span>
+            <span className="ml-2 text-xs font-normal text-muted">
+              ({inactiveCategories.length})
+            </span>
+            <span className="ml-2 text-xs font-normal text-muted">
+              Hidden from normal offering entry
+            </span>
+          </summary>
+          <div className="border-t border-surface-border divide-y divide-surface-border">
+            {inactiveCategories.map((category) => (
+              <CategoryListItem
+                key={category.id}
+                category={category}
+                currencyCode={currencyCode}
+                cumulativeReceived={cumulativeByCategory[category.id]}
+              />
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
