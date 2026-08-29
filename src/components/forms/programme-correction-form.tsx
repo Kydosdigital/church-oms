@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import {
@@ -306,9 +306,7 @@ function CountField({
 }: {
   label: string;
   error?: string;
-  inputProps: ReturnType<
-    ReturnType<typeof useForm<ProgrammeCorrectionValues>>["register"]
-  >;
+  inputProps: UseFormRegisterReturn;
 }) {
   const id = `correction-${label.toLowerCase().replaceAll(" ", "-")}`;
 
