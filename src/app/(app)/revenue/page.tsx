@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { StateBadge } from "@/components/ui/badge";
+import { formatChurchDate } from "@/lib/locales";
 import type { RecordState } from "@/types/domain";
 
 interface RevenueListRow {
@@ -16,6 +17,14 @@ export default async function RevenueListPage() {
   const supabase = await createClient();
   const ctx = await getCurrentUserContext();
   const canHistory = ctx?.permissions.hasFinanceHistoryPermission() ?? false;
+  const { data: church } = ctx?.user.church_id
+    ? await supabase
+        .from("churches")
+        .select("locale_code")
+        .eq("id", ctx.user.church_id)
+        .single()
+    : { data: null };
+  const localeCode = church?.locale_code ?? "en-GB";
 
   const { data } = await supabase
     .from("programme_occurrences")
@@ -58,7 +67,9 @@ export default async function RevenueListPage() {
             >
               <div>
                 <p className="font-medium">{p.programme_name}</p>
-                <p className="text-sm text-muted">{p.programme_date}</p>
+                <p className="text-sm text-muted">
+                  {formatChurchDate(p.programme_date, localeCode)}
+                </p>
               </div>
               <StateBadge state={financeState} />
             </Link>
