@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -33,6 +34,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", show: true },
@@ -49,11 +51,44 @@ export function AppShell({
     { href: "/help", label: "Help", show: true },
   ];
 
+  const visibleNavItems = navItems.filter((item) => item.show);
+
+  function navLink(item: NavItem, mobile = false) {
+    const isActive = pathname.startsWith(item.href);
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        aria-current={isActive ? "page" : undefined}
+        onClick={mobile ? () => setMobileMenuOpen(false) : undefined}
+        className={cn(
+          "text-sm transition-colors",
+          mobile
+            ? "flex min-h-11 items-center rounded-brand px-3 py-2.5"
+            : "px-4 py-2.5",
+          isActive
+            ? mobile
+              ? "bg-brand-muted font-medium text-brand"
+              : "bg-brand-muted text-brand border-l-2 border-brand"
+            : "text-foreground hover:bg-surface-border/40"
+        )}
+      >
+        {item.label}
+      </Link>
+    );
+  }
+
   return (
-    <div className="flex-1 flex flex-col sm:flex-row min-h-0">
-      <aside className="sm:w-60 shrink-0 border-b sm:border-b-0 sm:border-r border-surface-border bg-surface">
-        <div className="p-4 flex items-center justify-between sm:block">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-brand">
+    <div className="flex-1 flex min-h-0 flex-col sm:flex-row">
+      {/* Mobile app bar. Desktop keeps the existing persistent sidebar. */}
+      <header className="sticky top-0 z-40 border-b border-surface-border bg-surface sm:hidden">
+        <div className="flex min-h-16 items-center justify-between gap-3 px-4">
+          <Link
+            href="/dashboard"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex min-w-0 items-center gap-2 font-semibold text-brand"
+          >
             <Image
               src="/brand/church-oms-icon-primary-transparent.png"
               alt=""
@@ -62,32 +97,67 @@ export function AppShell({
               className="h-7 w-7 shrink-0 object-contain"
               priority
             />
-            <span>{process.env.NEXT_PUBLIC_APP_NAME ?? "Church Operations"}</span>
+            <span className="truncate">
+              {process.env.NEXT_PUBLIC_APP_NAME ?? "Church Operations"}
+            </span>
+          </Link>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-app-navigation"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className="shrink-0"
+          >
+            {mobileMenuOpen ? "Close" : "Menu"}
+          </Button>
+        </div>
+
+        {mobileMenuOpen && (
+          <div
+            id="mobile-app-navigation"
+            className="border-t border-surface-border px-3 pb-4 pt-3"
+          >
+            <nav aria-label="Main navigation" className="grid gap-1">
+              {visibleNavItems.map((item) => navLink(item, true))}
+            </nav>
+
+            <div className="mt-3 border-t border-surface-border pt-3">
+              <p className="px-3 text-sm font-medium">{ctx.user.full_name}</p>
+              <form action={signOut} className="mt-2">
+                <Button type="submit" variant="ghost" size="sm" className="w-full justify-start">
+                  Sign out
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
+      </header>
+
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-surface-border bg-surface sm:flex">
+        <div className="p-4">
+          <Link href="/dashboard" className="flex min-w-0 items-center gap-2 font-semibold text-brand">
+            <Image
+              src="/brand/church-oms-icon-primary-transparent.png"
+              alt=""
+              width={28}
+              height={28}
+              className="h-7 w-7 shrink-0 object-contain"
+              priority
+            />
+            <span className="truncate">
+              {process.env.NEXT_PUBLIC_APP_NAME ?? "Church Operations"}
+            </span>
           </Link>
         </div>
-        <nav aria-label="Main navigation" className="flex sm:flex-col overflow-x-auto sm:overflow-visible px-2 sm:px-0 pb-2 sm:pb-0">
-          {navItems
-            .filter((i) => i.show)
-            .map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "whitespace-nowrap px-4 py-2.5 text-sm rounded-brand sm:rounded-none",
-                    isActive
-                      ? "bg-brand-muted text-brand sm:border-l-2 sm:border-brand"
-                      : "text-foreground hover:bg-surface-border/40"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
+
+        <nav aria-label="Main navigation" className="flex flex-1 flex-col">
+          {visibleNavItems.map((item) => navLink(item))}
         </nav>
-        <div className="hidden sm:block p-4 mt-auto border-t border-surface-border">
+
+        <div className="border-t border-surface-border p-4">
           <p className="text-sm font-medium">{ctx.user.full_name}</p>
           <form action={signOut}>
             <Button type="submit" variant="ghost" size="sm" className="mt-2 px-0">
@@ -96,7 +166,8 @@ export function AppShell({
           </form>
         </div>
       </aside>
-      <div id="main-content" tabIndex={-1} className="flex-1 min-w-0 outline-none">
+
+      <div id="main-content" tabIndex={-1} className="min-w-0 flex-1 outline-none">
         {children}
       </div>
     </div>
