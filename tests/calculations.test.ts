@@ -7,6 +7,7 @@ import {
   attendanceGrowthRate,
   categoryTotal,
   projectProgressPercent,
+  givingPerAttendee,
   formatPercent,
 } from "@/lib/calculations";
 
@@ -106,6 +107,16 @@ describe("projectProgressPercent", () => {
   });
   it("computes percent of target raised", () => {
     expect(projectProgressPercent(250, 1000)).toBe(25);
+  });
+});
+
+describe("givingPerAttendee", () => {
+  it("returns null when there is no attendance baseline", () => {
+    expect(givingPerAttendee(1000, 0)).toBeNull();
+  });
+
+  it("calculates giving per attendee", () => {
+    expect(givingPerAttendee(1250, 100)).toBe(12.5);
   });
 });
 
