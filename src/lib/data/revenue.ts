@@ -8,7 +8,12 @@ import {
   offeringCategorySchema,
   type FundraisingProjectSettingsValues,
 } from "@/lib/validations/revenue";
-import type { OfferingCategory, RevenueEntry, FundraisingProject } from "@/types/domain";
+import type {
+  OfferingCategory,
+  RevenueEntry,
+  FundraisingProject,
+  ProgrammeOccurrence,
+} from "@/types/domain";
 
 type OfferingCategoryWithAvailability = OfferingCategory & {
   offering_category_service_types: { service_type_id: string }[];
@@ -112,9 +117,15 @@ export interface RevenueEntryInput {
   notes?: string;
 }
 
-/** Upserts one row per (programme, category) — REV-01..REV-07. Treasurer/
- * Accountant only, enforced by RLS (finance_write policy) not this function. */
-export async function saveRevenueEntries(programmeId: string, entries: RevenueEntryInput[]) {
+/** Saves the complete editable finance set and, optionally, submits it in
+ * one database transaction. Draft saves advance finance_version so stale
+ * sessions cannot silently overwrite a newer save. */
+export async function saveFinanceEntrySetAction(
+  programmeId: string,
+  expectedVersion: number,
+  entries: RevenueEntryInput[],
+  submit: boolean
+): Promise<ProgrammeOccurrence> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -132,50 +143,27 @@ export async function saveRevenueEntries(programmeId: string, entries: RevenueEn
     }
   }
 
-  const populated = entries.filter(
-    (entry) =>
-      entry.physical_amount > 0 ||
-      entry.online_amount > 0 ||
-      Boolean(entry.notes?.trim())
+  const { data, error } = await supabase.rpc(
+    "save_finance_entry_set" as never,
+    {
+      p_programme_id: programmeId,
+      p_expected_version: expectedVersion,
+      p_entries: entries,
+      p_submit: submit,
+    } as never
   );
-  const clearedCategoryIds = entries
-    .filter(
-      (entry) =>
-        entry.physical_amount === 0 &&
-        entry.online_amount === 0 &&
-        !entry.notes?.trim()
-    )
-    .map((entry) => entry.category_id);
 
-  if (populated.length > 0) {
-    const { error } = await supabase.from("revenue_entries").upsert(
-      populated.map((entry) => ({
-        programme_id: programmeId,
-        category_id: entry.category_id,
-        physical_amount: entry.physical_amount,
-        online_amount: entry.online_amount,
-        notes: entry.notes?.trim() || null,
-        created_by: user.id,
-        updated_by: user.id,
-      })),
-      { onConflict: "programme_id,category_id" }
-    );
-    if (error) throw error;
-  }
+  if (error) throw error;
+  if (!data) throw new Error("Finance save did not return the programme record");
 
-  // Clearing an existing category back to zero should really clear it. The old
-  // filter-only implementation skipped zero values, which could leave a stale
-  // previously-entered amount in the database.
-  if (clearedCategoryIds.length > 0) {
-    const { error } = await supabase
-      .from("revenue_entries")
-      .delete()
-      .eq("programme_id", programmeId)
-      .in("category_id", clearedCategoryIds);
-    if (error) throw error;
+  const result = Array.isArray(data) ? data[0] : data;
+  if (!result || typeof result !== "object" || !("id" in result)) {
+    throw new Error("Finance save returned an invalid programme record");
   }
 
   revalidatePath(`/revenue/${programmeId}`);
+  revalidatePath(`/programmes/${programmeId}`);
+  return result as unknown as ProgrammeOccurrence;
 }
 
 export async function submitFinanceAction(programmeId: string, expectedVersion: number) {
