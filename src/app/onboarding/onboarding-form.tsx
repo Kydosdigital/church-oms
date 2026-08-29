@@ -9,7 +9,7 @@ const initialState: OnboardingActionState = {};
 
 const COMMON_CURRENCIES = ["USD", "GBP", "EUR", "NGN", "GHS", "KES", "ZAR", "CAD", "AUD"];
 
-export function OnboardingForm() {
+export function OnboardingForm({ timeZones }: { timeZones: string[] }) {
   const [state, formAction, pending] = useActionState(provisionChurch, initialState);
 
   return (
@@ -37,20 +37,24 @@ export function OnboardingForm() {
         </div>
         <div>
           <Label htmlFor="timezone">Timezone</Label>
-          <Input
+          <select
             id="timezone"
             name="timezone"
             required
-            placeholder="e.g. Africa/Lagos"
-            defaultValue={
-              typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC"
-            }
-          />
+            defaultValue="UTC"
+            className="block w-full rounded-brand border border-surface-border bg-background px-3 h-11 text-base focus-visible:outline-2 focus-visible:outline-brand"
+          >
+            {timeZones.map((zone) => (
+              <option key={zone} value={zone}>
+                {zone}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
       <p className="text-xs text-muted -mt-2">
-        Use an IANA timezone name (e.g. America/New_York, Europe/London, Africa/Lagos). You can
-        change all of this later from Church settings.
+        Choose the church&rsquo;s local timezone. This controls how timestamps and sign-offs are shown
+        and can be changed later from Church settings.
       </p>
 
       <FieldError>{state.error}</FieldError>
