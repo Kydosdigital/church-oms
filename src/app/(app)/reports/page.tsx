@@ -8,6 +8,7 @@ import { AttendanceGivingChart } from "@/components/reports/attendance-giving-ch
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/calculations";
+import { formatChurchDate } from "@/lib/locales";
 
 export default async function ReportsPage(props: PageProps<"/reports">) {
   const searchParams = await props.searchParams;
@@ -21,7 +22,7 @@ export default async function ReportsPage(props: PageProps<"/reports">) {
   const { data: church } = ctx?.user.church_id
     ? await supabase
         .from("churches")
-        .select("currency_code, reporting_year_start_month")
+        .select("currency_code, locale_code, reporting_year_start_month")
         .eq("id", ctx.user.church_id)
         .single()
     : { data: null };
@@ -31,6 +32,7 @@ export default async function ReportsPage(props: PageProps<"/reports">) {
     church?.reporting_year_start_month ?? 1
   );
   const currencyCode = church?.currency_code ?? "GBP";
+  const localeCode = church?.locale_code ?? "en-GB";
   const query = new URLSearchParams({ from: range.from, to: range.to }).toString();
 
   const [attendance, comparison] = await Promise.all([
@@ -78,22 +80,22 @@ export default async function ReportsPage(props: PageProps<"/reports">) {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metric
           label="Verified services"
-          value={attendance.length.toLocaleString()}
+          value={attendance.length.toLocaleString(localeCode)}
           note="Attendance workflow completed"
         />
         <Metric
           label="Total attendance"
-          value={attendanceTotal.toLocaleString()}
+          value={attendanceTotal.toLocaleString(localeCode)}
           note="Across verified services in this period"
         />
         <Metric
           label="Average attendance"
-          value={averageAttendance === null ? "N/A" : averageAttendance.toLocaleString()}
+          value={averageAttendance === null ? "N/A" : averageAttendance.toLocaleString(localeCode)}
           note="Per verified service"
         />
         <Metric
           label="First-timers / converts"
-          value={firstTimers.toLocaleString() + " / " + converts.toLocaleString()}
+          value={firstTimers.toLocaleString(localeCode) + " / " + converts.toLocaleString(localeCode)}
           note="Verified attendance outcomes"
         />
       </section>
@@ -103,17 +105,17 @@ export default async function ReportsPage(props: PageProps<"/reports">) {
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Metric
               label="Services compared"
-              value={comparison.length.toLocaleString()}
+              value={comparison.length.toLocaleString(localeCode)}
               note="Both attendance and finance verified"
             />
             <Metric
               label="Compared attendance"
-              value={comparedAttendance.toLocaleString()}
+              value={comparedAttendance.toLocaleString(localeCode)}
               note="Attendance behind the giving comparison"
             />
             <Metric
               label="Verified giving"
-              value={formatCurrency(comparedGiving, currencyCode)}
+              value={formatCurrency(comparedGiving, currencyCode, localeCode)}
               note="Across services with both workflows verified"
             />
             <Metric
@@ -121,7 +123,7 @@ export default async function ReportsPage(props: PageProps<"/reports">) {
               value={
                 givingPerAttendee === null
                   ? "N/A"
-                  : formatCurrency(givingPerAttendee, currencyCode)
+                  : formatCurrency(givingPerAttendee, currencyCode, localeCode)
               }
               note="Verified giving divided by verified attendance"
             />
@@ -136,7 +138,11 @@ export default async function ReportsPage(props: PageProps<"/reports">) {
                 right axis.
               </CardDescription>
             </CardHeader>
-            <AttendanceGivingChart data={comparison} currencyCode={currencyCode} />
+            <AttendanceGivingChart
+              data={comparison}
+              currencyCode={currencyCode}
+              localeCode={localeCode}
+            />
           </Card>
 
           {comparison.length > 0 && (
@@ -163,19 +169,21 @@ export default async function ReportsPage(props: PageProps<"/reports">) {
                   <tbody className="divide-y divide-surface-border">
                     {comparison.map((point) => (
                       <tr key={point.programme_id}>
-                        <td className="py-2">{formatDate(point.programme_date)}</td>
+                        <td className="py-2">
+                          {formatChurchDate(point.programme_date, localeCode)}
+                        </td>
                         <td className="py-2 font-medium">{point.programme_name}</td>
                         <td className="py-2 text-muted">{point.branch_name}</td>
                         <td className="py-2 text-right">
-                          {point.total_attendance.toLocaleString()}
+                          {point.total_attendance.toLocaleString(localeCode)}
                         </td>
                         <td className="py-2 text-right">
-                          {formatCurrency(point.total_giving, currencyCode)}
+                          {formatCurrency(point.total_giving, currencyCode, localeCode)}
                         </td>
                         <td className="py-2 text-right">
                           {point.giving_per_attendee === null
                             ? "N/A"
-                            : formatCurrency(point.giving_per_attendee, currencyCode)}
+                            : formatCurrency(point.giving_per_attendee, currencyCode, localeCode)}
                         </td>
                       </tr>
                     ))}
@@ -257,10 +265,3 @@ function Metric({
   );
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value + "T12:00:00"));
-}
