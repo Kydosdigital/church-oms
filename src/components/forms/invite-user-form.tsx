@@ -45,6 +45,7 @@ export function InviteUserForm({
   const role = watch("role");
   const isFinanceRole = role === "treasurer" || role === "finance_verifier";
   const isSuperAdminRole = role === "super_admin";
+  const isChurchwideRole = isSuperAdminRole || role === "administrator";
   const assignableRoles = appRoleValues.filter(
     (value) => canAssignSuperAdmin || value !== "super_admin"
   );
@@ -53,8 +54,8 @@ export function InviteUserForm({
     const hasFinance = isFinanceRole || isSuperAdminRole;
     setValue("finance_permission", hasFinance);
     setValue("finance_history_permission", hasFinance);
-    if (isSuperAdminRole) setValue("branch_id", undefined);
-  }, [isFinanceRole, isSuperAdminRole, setValue]);
+    if (isChurchwideRole) setValue("branch_id", undefined);
+  }, [isFinanceRole, isSuperAdminRole, isChurchwideRole, setValue]);
 
   async function onSubmit(data: InviteUserWithRoleValues) {
     setPending(true);
@@ -63,7 +64,7 @@ export function InviteUserForm({
     try {
       await inviteUserWithRole({
         ...data,
-        branch_id: isSuperAdminRole ? undefined : data.branch_id || undefined,
+        branch_id: isChurchwideRole ? undefined : data.branch_id || undefined,
         finance_permission: isSuperAdminRole || isFinanceRole,
         finance_history_permission: isSuperAdminRole
           ? true
@@ -72,7 +73,7 @@ export function InviteUserForm({
             : false,
       });
 
-      const branchName = isSuperAdminRole
+      const branchName = isChurchwideRole
         ? "All branches"
         : data.branch_id
           ? branches.find((branch) => branch.id === data.branch_id)?.name ?? "Selected branch"
@@ -141,7 +142,7 @@ export function InviteUserForm({
           <select
             id="invite-branch"
             {...register("branch_id")}
-            disabled={isSuperAdminRole}
+            disabled={isChurchwideRole}
             className="block w-full rounded-brand border border-surface-border bg-background h-10 px-3 text-sm disabled:opacity-60"
           >
             <option value="">All branches</option>
@@ -155,12 +156,15 @@ export function InviteUserForm({
         </div>
       </div>
 
-      {isSuperAdminRole && (
+      {isChurchwideRole && (
         <div className="rounded-brand bg-brand-muted p-3 space-y-1">
-          <p className="text-sm font-medium text-brand">Full church access</p>
+          <p className="text-sm font-medium text-brand">
+            {isSuperAdminRole ? "Full church access" : "Church-wide administration"}
+          </p>
           <p className="text-xs text-muted">
-            Super Admin is church-wide, includes complete finance visibility, all administration,
-            and permission to appoint another Super Admin.
+            {isSuperAdminRole
+              ? "Super Admin is church-wide, includes complete finance visibility, all administration, and permission to appoint another Super Admin."
+              : "Administrator access is church-wide. Finance visibility is still granted separately and is not implied by Administrator status."}
           </p>
         </div>
       )}
