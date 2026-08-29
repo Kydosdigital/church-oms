@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -31,17 +31,10 @@ export function DateRangeControl({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [customFrom, setCustomFrom] = useState(from);
-  const [customTo, setCustomTo] = useState(to);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setCustomFrom(from);
-    setCustomTo(to);
-    setError(null);
-  }, [from, to, preset]);
-
   function setPreset(value: string) {
+    setError(null);
     const params = new URLSearchParams(searchParams.toString());
     params.set("range", value);
     if (value !== "custom") {
@@ -54,6 +47,10 @@ export function DateRangeControl({
   function applyCustom(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const customFrom = String(formData.get("from") ?? "");
+    const customTo = String(formData.get("to") ?? "");
 
     if (!customFrom || !customTo) {
       setError("Choose both a start and end date.");
@@ -93,9 +90,9 @@ export function DateRangeControl({
             <Label htmlFor="range-from">From</Label>
             <Input
               id="range-from"
+              name="from"
               type="date"
-              value={customFrom}
-              onChange={(event) => setCustomFrom(event.target.value)}
+              defaultValue={from}
               className="h-9 w-40"
             />
           </div>
@@ -103,9 +100,9 @@ export function DateRangeControl({
             <Label htmlFor="range-to">To</Label>
             <Input
               id="range-to"
+              name="to"
               type="date"
-              value={customTo}
-              onChange={(event) => setCustomTo(event.target.value)}
+              defaultValue={to}
               className="h-9 w-40"
             />
           </div>
