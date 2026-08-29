@@ -2,12 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import {
-  totalAttendance,
-  exceedsCapacity,
-  outcomesExceedAttendance,
-} from "@/lib/calculations";
-import type { ProgrammeEntryValues } from "@/lib/validations/programme";
+import type {
+  ProgrammeCorrectionValues,
+  ProgrammeEntryValues,
+} from "@/lib/validations/programme";
 import type { ProgrammeOccurrence, AttendanceRecord, RecordState } from "@/types/domain";
 
 export interface ProgrammeWithAttendance {
@@ -82,62 +80,6 @@ export async function checkDuplicateService(
   return data ?? null;
 }
 
-async function resolvePrimaryPreacherId(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  churchId: string,
-  values: ProgrammeEntryValues
-): Promise<string | null> {
-  if (values.preacher_type === "none") return null;
-
-  if (values.preacher_type === "existing") {
-    if (!values.preacher_id) throw new Error("Select the preacher");
-
-    // Do not trust a posted UUID by itself. The selected minister must belong
-    // to the same church as the programme and still be active.
-    const { data: minister } = await supabase
-      .from("ministers")
-      .select("id")
-      .eq("id", values.preacher_id)
-      .eq("church_id", churchId)
-      .eq("active", true)
-      .maybeSingle();
-
-    if (!minister) throw new Error("The selected preacher is not available for this church");
-    return minister.id;
-  }
-
-  const guestName = values.guest_preacher_name?.trim();
-  if (!guestName) throw new Error("Enter the guest preacher's name");
-
-  // Guest preachers are still stored as ministers so historic reporting keeps
-  // a stable person reference instead of a one-off text value. Reuse an exact
-  // existing guest record when possible to avoid duplicate names over time.
-  const { data: existingGuest } = await supabase
-    .from("ministers")
-    .select("id")
-    .eq("church_id", churchId)
-    .eq("full_name", guestName)
-    .eq("is_guest", true)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingGuest) return existingGuest.id;
-
-  const { data: guest, error } = await supabase
-    .from("ministers")
-    .insert({
-      church_id: churchId,
-      full_name: guestName,
-      is_guest: true,
-      active: true,
-    })
-    .select("id")
-    .single();
-
-  if (error) throw error;
-  return guest.id;
-}
-
 /** Creates the programme header, attendance row, guest-minister links and,
  * optionally, the attendance submission in one PostgreSQL statement. The RPC
  * is SECURITY INVOKER, so the caller's normal grants and RLS remain active. */
@@ -180,56 +122,40 @@ export async function createAndSubmitProgramme(values: ProgrammeEntryValues) {
   return createProgrammeEntry(values, true);
 }
 
-export async function updateDraftAttendance(programmeId: string, values: ProgrammeEntryValues) {
+export async function updateProgrammeEntryAction(
+  programmeId: string,
+  expectedVersion: number,
+  values: ProgrammeCorrectionValues,
+  submit: boolean
+): Promise<ProgrammeOccurrence> {
   const supabase = await createClient();
 
-  const { data: programme } = await supabase
-    .from("programme_occurrences")
-    .select("church_id, venue_capacity_snapshot")
-    .eq("id", programmeId)
-    .single();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
 
-  if (!programme) throw new Error("Programme not found");
+  const { data, error } = await supabase.rpc(
+    "update_programme_entry" as never,
+    {
+      p_programme_id: programmeId,
+      p_expected_version: expectedVersion,
+      p_entry: values,
+      p_submit: submit,
+    } as never
+  );
 
-  const preacherId = await resolvePrimaryPreacherId(supabase, programme.church_id, values);
-  const total = totalAttendance(values);
-  const capacity = programme.venue_capacity_snapshot;
+  if (error) throw error;
+  if (!data) throw new Error("Programme correction did not return a record");
 
-  if (exceedsCapacity(total, capacity) && !values.capacity_exception_note) {
-    throw new Error("Attendance exceeds venue capacity — add an explanatory note (ATT-07).");
+  const result = Array.isArray(data) ? data[0] : data;
+  if (!result || typeof result !== "object" || !("id" in result)) {
+    throw new Error("Programme correction returned an invalid record");
   }
-  if (outcomesExceedAttendance(values, total) && !values.outcome_exception_note) {
-    throw new Error("First-timers/converts exceed total attendance — add an explanatory note (ATT-07).");
-  }
-
-  await supabase
-    .from("programme_occurrences")
-    .update({
-      programme_name: values.programme_name,
-      classification: values.classification,
-      preacher_id: preacherId,
-      sermon_topic: values.sermon_topic || null,
-      notes: values.notes || null,
-    })
-    .eq("id", programmeId);
-
-  await supabase
-    .from("attendance_records")
-    .update({
-      men_count: values.men_count,
-      women_count: values.women_count,
-      teenagers_count: values.teenagers_count,
-      children_count: values.children_count,
-      first_timers_count: values.first_timers_count,
-      converts_count: values.converts_count,
-      new_births_count: values.new_births_count,
-      weddings_count: values.weddings_count,
-      capacity_exception_note: values.capacity_exception_note || null,
-      outcome_exception_note: values.outcome_exception_note || null,
-    })
-    .eq("programme_id", programmeId);
 
   revalidatePath(`/programmes/${programmeId}`);
+  revalidatePath("/programmes");
+  return result as unknown as ProgrammeOccurrence;
 }
 
 export async function submitAttendanceAction(programmeId: string, expectedVersion: number) {
