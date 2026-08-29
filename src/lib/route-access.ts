@@ -5,35 +5,21 @@ import {
   getCurrentUserContext,
   type CurrentUserContext,
 } from "@/lib/data/current-user";
+import {
+  canAccessAdmin,
+  canAccessProgrammes,
+  canAccessRevenue,
+  canAccessReports,
+} from "@/lib/access-policy";
+
+export {
+  canAccessAdmin,
+  canAccessProgrammes,
+  canAccessRevenue,
+  canAccessReports,
+};
 
 export type AppAccessArea = "admin" | "programmes" | "revenue" | "reports";
-
-function hasAnyRole(ctx: CurrentUserContext, roles: string[]) {
-  return ctx.roles.some((assignment) => roles.includes(assignment.role));
-}
-
-export function canAccessAdmin(ctx: CurrentUserContext) {
-  return ctx.permissions.isAdministrator();
-}
-
-export function canAccessProgrammes(ctx: CurrentUserContext) {
-  return (
-    ctx.permissions.isAdministrator() ||
-    hasAnyRole(ctx, ["usher", "attendance_verifier", "pastor"])
-  );
-}
-
-export function canAccessRevenue(ctx: CurrentUserContext) {
-  return ctx.permissions.hasFinancePermission();
-}
-
-export function canAccessReports(ctx: CurrentUserContext) {
-  return (
-    ctx.permissions.isAdministrator() ||
-    hasAnyRole(ctx, ["pastor", "attendance_verifier"]) ||
-    ctx.permissions.hasFinanceHistoryPermission()
-  );
-}
 
 async function requireActiveChurchUser() {
   const ctx = await getCurrentUserContext();
