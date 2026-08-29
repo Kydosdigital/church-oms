@@ -74,13 +74,29 @@ export function VerificationActions({
     }
   }
 
+  const statusMessage =
+    state === "submitted"
+      ? canVerify
+        ? "Review the submitted attendance below, then verify it or return it for correction."
+        : "This attendance record has been submitted and is waiting for an Attendance Verifier."
+      : state === "verified"
+        ? "This attendance record is verified and locked. Reopening requires an Administrator and a reason."
+        : state === "returned"
+          ? "This record was returned for correction and must be resubmitted after the changes are made."
+          : state === "reopened"
+            ? "This verified record was reopened for correction and must be submitted through the workflow again."
+            : "This record is still a draft and has not been digitally signed.";
+
   return (
     <div className="space-y-3">
+      <p className="text-sm text-muted">{statusMessage}</p>
       {error && <p className="text-sm text-danger">{error}</p>}
 
       {state === "submitted" && canVerify && (
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleVerify} disabled={pending}>Verify</Button>
+          <Button onClick={handleVerify} disabled={pending}>
+            {pending ? "Verifying…" : "Verify"}
+          </Button>
           <Button variant="outline" onClick={() => setShowReturnForm((s) => !s)} disabled={pending}>
             Return for correction
           </Button>
@@ -95,7 +111,7 @@ export function VerificationActions({
             onChange={(e) => setReason(e.target.value)}
           />
           <Button size="sm" variant="danger" onClick={handleReturn} disabled={pending || reason.trim().length < 3}>
-            Confirm return
+            {pending ? "Returning…" : "Confirm return"}
           </Button>
         </div>
       )}
@@ -114,7 +130,7 @@ export function VerificationActions({
             onChange={(e) => setReason(e.target.value)}
           />
           <Button size="sm" variant="danger" onClick={handleReopen} disabled={pending || reason.trim().length < 3}>
-            Confirm reopen
+            {pending ? "Reopening…" : "Confirm reopen"}
           </Button>
         </div>
       )}
