@@ -1011,6 +1011,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      platform_owner_dashboard_snapshot: {
+        Args: {
+          p_account_limit?: number
+          p_church_limit?: number
+          p_days?: number
+        }
+        Returns: Json
+      }
       provision_new_church: {
         Args: { p_currency?: string; p_name: string; p_timezone?: string }
         Returns: string
