@@ -2,6 +2,11 @@ import { z } from "zod";
 
 const nonNegativeAmount = z.coerce.number().min(0, "Amount cannot be negative");
 
+const optionalPositiveAmount = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? undefined : value),
+  z.coerce.number().positive("Target amount must be greater than zero").optional()
+);
+
 export const revenueEntrySchema = z.object({
   category_id: z.string().uuid(),
   physical_amount: nonNegativeAmount,
@@ -18,7 +23,7 @@ export type RevenueFormValues = z.infer<typeof revenueFormSchema>;
 
 export const fundraisingProjectSettingsSchema = z
   .object({
-    target_amount: z.coerce.number().positive().optional(),
+    target_amount: optionalPositiveAmount,
     start_date: z.string().optional(),
     end_date: z.string().optional(),
     accepting_entries_after_end_override: z.boolean().default(false),
@@ -56,7 +61,7 @@ export const offeringCategorySchema = z
     category_type: z.enum(["general", "project", "special"]),
     applies_to_all_service_types: z.boolean().default(true),
     service_type_ids: z.array(z.string().uuid()).default([]),
-    target_amount: z.coerce.number().positive().optional(),
+    target_amount: optionalPositiveAmount,
     start_date: z.string().optional(),
     end_date: z.string().optional(),
     accepting_entries_after_end_override: z.boolean().default(false),
