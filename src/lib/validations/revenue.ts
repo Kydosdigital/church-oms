@@ -16,6 +16,39 @@ export const revenueFormSchema = z.object({
 
 export type RevenueFormValues = z.infer<typeof revenueFormSchema>;
 
+export const fundraisingProjectSettingsSchema = z
+  .object({
+    target_amount: z.coerce.number().positive().optional(),
+    start_date: z.string().optional(),
+    end_date: z.string().optional(),
+    accepting_entries_after_end_override: z.boolean().default(false),
+  })
+  .superRefine((values, ctx) => {
+    if (
+      values.start_date &&
+      values.end_date &&
+      values.end_date < values.start_date
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["end_date"],
+        message: "End date cannot be before the start date",
+      });
+    }
+
+    if (values.accepting_entries_after_end_override && !values.end_date) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["accepting_entries_after_end_override"],
+        message: "Set an end date before allowing entries after the end date",
+      });
+    }
+  });
+
+export type FundraisingProjectSettingsValues = z.infer<
+  typeof fundraisingProjectSettingsSchema
+>;
+
 export const offeringCategorySchema = z
   .object({
     name: z.string().min(1, "Name is required"),
@@ -26,6 +59,7 @@ export const offeringCategorySchema = z
     target_amount: z.coerce.number().positive().optional(),
     start_date: z.string().optional(),
     end_date: z.string().optional(),
+    accepting_entries_after_end_override: z.boolean().default(false),
   })
   .superRefine((values, ctx) => {
     if (
@@ -48,6 +82,18 @@ export const offeringCategorySchema = z
         code: "custom",
         path: ["end_date"],
         message: "End date cannot be before the start date",
+      });
+    }
+
+    if (
+      values.category_type === "project" &&
+      values.accepting_entries_after_end_override &&
+      !values.end_date
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["accepting_entries_after_end_override"],
+        message: "Set an end date before allowing entries after the end date",
       });
     }
   });
