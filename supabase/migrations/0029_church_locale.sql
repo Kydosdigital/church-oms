@@ -114,8 +114,8 @@ $$;
 create or replace function public.complete_church_onboarding(
   p_user_id uuid,
   p_name text,
-  p_currency text,
-  p_timezone text
+  p_currency text default 'USD',
+  p_timezone text default 'UTC'
 )
 returns uuid
 language sql
