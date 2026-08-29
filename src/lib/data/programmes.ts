@@ -138,10 +138,13 @@ async function resolvePrimaryPreacherId(
   return guest.id;
 }
 
-/** Creates a draft programme + its (initially empty) attendance record.
- * SRV-08 duplicate check happens client-side before calling this (warns, does
- * not hard-block) and server-side via the partial unique index as a backstop. */
-export async function createDraftProgramme(values: ProgrammeEntryValues) {
+/** Creates the programme header, attendance row, guest-minister links and,
+ * optionally, the attendance submission in one PostgreSQL statement. The RPC
+ * is SECURITY INVOKER, so the caller's normal grants and RLS remain active. */
+async function createProgrammeEntry(
+  values: ProgrammeEntryValues,
+  submit: boolean
+): Promise<ProgrammeOccurrence> {
   const supabase = await createClient();
 
   const {
@@ -149,104 +152,32 @@ export async function createDraftProgramme(values: ProgrammeEntryValues) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const [{ data: venue }, { data: branch }, { data: serviceType }] = await Promise.all([
-    supabase
-      .from("venues")
-      .select("branch_id, default_capacity")
-      .eq("id", values.venue_id)
-      .maybeSingle(),
-    supabase
-      .from("branches")
-      .select("church_id")
-      .eq("id", values.branch_id)
-      .maybeSingle(),
-    supabase
-      .from("service_types")
-      .select("church_id")
-      .eq("id", values.service_type_id)
-      .maybeSingle(),
-  ]);
-
-  if (!branch) throw new Error("Branch not found");
-  if (!venue || venue.branch_id !== values.branch_id) {
-    throw new Error("The selected venue does not belong to this branch");
-  }
-  if (!serviceType || serviceType.church_id !== branch.church_id) {
-    throw new Error("The selected service type does not belong to this church");
-  }
-
-  const total = totalAttendance(values);
-  const capacity = venue?.default_capacity ?? 0;
-  const capacityExceeded = exceedsCapacity(total, capacity);
-  const outcomesExceeded = outcomesExceedAttendance(values, total);
-
-  if (capacityExceeded && !values.capacity_exception_note) {
-    throw new Error("Attendance exceeds venue capacity — add an explanatory note (ATT-07).");
-  }
-  if (outcomesExceeded && !values.outcome_exception_note) {
-    throw new Error("First-timers/converts exceed total attendance — add an explanatory note (ATT-07).");
-  }
-
-  // SRV-08 server-side backstop: the wizard already warns and collects an
-  // override reason client-side, but re-check here in case of a race (two
-  // ushers submitting at once) or a client that skipped the check.
-  const duplicate = await checkDuplicateService(values.branch_id, values.service_type_id, values.programme_date);
-  if (duplicate && !values.duplicate_override) {
-    throw new Error(
-      `A ${values.classification === "special_event" ? "programme" : "service"} already exists for this branch, service type and date ("${duplicate.programme_name}"). Confirm this is intentional and add a reason to continue.`
-    );
-  }
-  if (duplicate && values.duplicate_override && !values.duplicate_override_reason) {
-    throw new Error("Add a reason for recording a duplicate service on the same day.");
-  }
-
-  const preacherId = await resolvePrimaryPreacherId(supabase, branch.church_id, values);
-
-  const { data: programme, error } = await supabase
-    .from("programme_occurrences")
-    .insert({
-      church_id: branch.church_id,
-      branch_id: values.branch_id,
-      service_type_id: values.service_type_id,
-      venue_id: values.venue_id,
-      programme_date: values.programme_date,
-      programme_name: values.programme_name,
-      classification: values.classification,
-      preacher_id: preacherId,
-      sermon_topic: values.sermon_topic || null,
-      venue_capacity_snapshot: capacity,
-      notes: values.notes || null,
-      duplicate_override: Boolean(duplicate && values.duplicate_override),
-      duplicate_override_reason: duplicate && values.duplicate_override ? values.duplicate_override_reason || null : null,
-      created_by: user.id,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc(
+    "create_programme_entry" as never,
+    {
+      p_entry: values,
+      p_submit: submit,
+    } as never
+  );
 
   if (error) throw error;
+  if (!data) throw new Error("Programme creation did not return a record");
 
-  if (values.guest_minister_ids.length > 0) {
-    await supabase.from("programme_guest_ministers").insert(
-      values.guest_minister_ids.map((minister_id) => ({ programme_id: programme.id, minister_id }))
-    );
+  const result = Array.isArray(data) ? data[0] : data;
+  if (!result || typeof result !== "object" || !("id" in result)) {
+    throw new Error("Programme creation returned an invalid record");
   }
 
-  await supabase.from("attendance_records").insert({
-    programme_id: programme.id,
-    men_count: values.men_count,
-    women_count: values.women_count,
-    teenagers_count: values.teenagers_count,
-    children_count: values.children_count,
-    first_timers_count: values.first_timers_count,
-    converts_count: values.converts_count,
-    new_births_count: values.new_births_count,
-    weddings_count: values.weddings_count,
-    capacity_exception_note: values.capacity_exception_note || null,
-    outcome_exception_note: values.outcome_exception_note || null,
-  });
-
   revalidatePath("/programmes");
-  return programme as ProgrammeOccurrence;
+  return result as unknown as ProgrammeOccurrence;
+}
+
+export async function createDraftProgramme(values: ProgrammeEntryValues) {
+  return createProgrammeEntry(values, false);
+}
+
+export async function createAndSubmitProgramme(values: ProgrammeEntryValues) {
+  return createProgrammeEntry(values, true);
 }
 
 export async function updateDraftAttendance(programmeId: string, values: ProgrammeEntryValues) {
