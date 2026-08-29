@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -6,30 +7,70 @@ export interface PlatformAdminContext {
   role: "owner" | "admin" | "support";
 }
 
-export interface PlatformChurchRow {
-  id: string;
-  name: string;
-  currency_code: string;
-  timezone: string;
-  created_at: string;
-  user_count: number;
-  active_user_count: number;
-  branch_count: number;
-  programme_count: number;
-  super_admins: { full_name: string; email: string }[];
-}
+const platformSnapshotSchema = z.object({
+  totals: z.object({
+    churches: z.number().int().nonnegative(),
+    churches_last_7_days: z.number().int().nonnegative(),
+    users: z.number().int().nonnegative(),
+    active_users: z.number().int().nonnegative(),
+    awaiting_church_setup: z.number().int().nonnegative(),
+    branches: z.number().int().nonnegative(),
+    programmes: z.number().int().nonnegative(),
+    active_churches_30_days: z.number().int().nonnegative(),
+  }),
+  growth: z.array(
+    z.object({
+      date: z.string(),
+      churches: z.number().int().nonnegative(),
+      accounts: z.number().int().nonnegative(),
+      programmes: z.number().int().nonnegative(),
+    })
+  ),
+  churches: z.array(
+    z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      currency_code: z.string(),
+      timezone: z.string(),
+      created_at: z.string(),
+      user_count: z.number().int().nonnegative(),
+      active_user_count: z.number().int().nonnegative(),
+      branch_count: z.number().int().nonnegative(),
+      programme_count: z.number().int().nonnegative(),
+      latest_programme_at: z.string().nullable(),
+      super_admins: z.array(
+        z.object({
+          full_name: z.string(),
+          email: z.string(),
+        })
+      ),
+    })
+  ),
+  recent_accounts: z.array(
+    z.object({
+      id: z.string().uuid(),
+      full_name: z.string(),
+      email: z.string(),
+      active: z.boolean(),
+      created_at: z.string(),
+      church_id: z.string().uuid().nullable(),
+      church_name: z.string().nullable(),
+    })
+  ),
+});
 
-export interface PlatformAccountRow {
-  id: string;
-  full_name: string;
-  email: string;
-  active: boolean;
-  created_at: string;
-  church_id: string | null;
-  church_name: string | null;
-}
+export type PlatformChurchRow = z.infer<
+  typeof platformSnapshotSchema.shape.churches.element
+>;
+export type PlatformAccountRow = z.infer<
+  typeof platformSnapshotSchema.shape.recent_accounts.element
+>;
+export type PlatformGrowthPoint = z.infer<
+  typeof platformSnapshotSchema.shape.growth.element
+>;
 
 export interface PlatformDashboardData {
+  platformRole: PlatformAdminContext["role"];
   totals: {
     churches: number;
     churchesLast7Days: number;
@@ -38,7 +79,9 @@ export interface PlatformDashboardData {
     awaitingChurchSetup: number;
     branches: number;
     programmes: number;
+    activeChurches30Days: number;
   };
+  growth: PlatformGrowthPoint[];
   churches: PlatformChurchRow[];
   recentAccounts: PlatformAccountRow[];
 }
@@ -72,74 +115,43 @@ export async function getPlatformDashboardData(): Promise<PlatformDashboardData 
   const platform = await getPlatformAdminContext();
   if (!platform) return null;
 
-  // Never expose the service-role client to a Client Component. All cross-
-  // tenant aggregation stays on the server after platform membership is
-  // verified above.
+  // The service-role client is used only after platform membership is proven
+  // through the caller's normal RLS-bound session. Cross-tenant aggregation is
+  // performed inside PostgreSQL and returns a bounded dashboard projection,
+  // rather than downloading every source row into application memory.
   const admin = createAdminClient();
 
-  const [churchResult, userResult, branchResult, programmeResult, roleResult] = await Promise.all([
-    admin
-      .from("churches")
-      .select("id, name, currency_code, timezone, created_at")
-      .order("created_at", { ascending: false }),
-    admin
-      .from("app_users")
-      .select("id, church_id, full_name, email, active, created_at")
-      .order("created_at", { ascending: false }),
-    admin.from("branches").select("id, church_id, active"),
-    admin.from("programme_occurrences").select("id, church_id, created_at"),
-    admin.from("user_roles").select("user_id, role"),
-  ]);
-
-  for (const result of [churchResult, userResult, branchResult, programmeResult, roleResult]) {
-    if (result.error) throw result.error;
-  }
-
-  const churches = churchResult.data ?? [];
-  const users = userResult.data ?? [];
-  const branches = branchResult.data ?? [];
-  const programmes = programmeResult.data ?? [];
-  const roles = roleResult.data ?? [];
-
-  const churchNameById = new Map(churches.map((church) => [church.id, church.name]));
-  const superAdminIds = new Set(
-    roles.filter((assignment) => assignment.role === "super_admin").map((assignment) => assignment.user_id)
-  );
-
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-
-  const churchRows: PlatformChurchRow[] = churches.map((church) => {
-    const churchUsers = users.filter((user) => user.church_id === church.id);
-    const superAdmins = churchUsers
-      .filter((user) => superAdminIds.has(user.id))
-      .map((user) => ({ full_name: user.full_name, email: user.email }));
-
-    return {
-      ...church,
-      user_count: churchUsers.length,
-      active_user_count: churchUsers.filter((user) => user.active).length,
-      branch_count: branches.filter((branch) => branch.church_id === church.id && branch.active).length,
-      programme_count: programmes.filter((programme) => programme.church_id === church.id).length,
-      super_admins: superAdmins,
-    };
+  const { data, error } = await admin.rpc("platform_owner_dashboard_snapshot", {
+    p_days: 30,
+    p_church_limit: 50,
+    p_account_limit: 25,
   });
 
-  const recentAccounts: PlatformAccountRow[] = users.slice(0, 25).map((user) => ({
-    ...user,
-    church_name: user.church_id ? churchNameById.get(user.church_id) ?? null : null,
-  }));
+  if (error) throw error;
+
+  const parsed = platformSnapshotSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error(
+      `Platform analytics payload failed validation: ${parsed.error.issues[0]?.message ?? "unknown shape"}`
+    );
+  }
+
+  const snapshot = parsed.data;
 
   return {
+    platformRole: platform.role,
     totals: {
-      churches: churches.length,
-      churchesLast7Days: churches.filter((church) => new Date(church.created_at).getTime() >= sevenDaysAgo).length,
-      users: users.length,
-      activeUsers: users.filter((user) => user.active).length,
-      awaitingChurchSetup: users.filter((user) => !user.church_id).length,
-      branches: branches.filter((branch) => branch.active).length,
-      programmes: programmes.length,
+      churches: snapshot.totals.churches,
+      churchesLast7Days: snapshot.totals.churches_last_7_days,
+      users: snapshot.totals.users,
+      activeUsers: snapshot.totals.active_users,
+      awaitingChurchSetup: snapshot.totals.awaiting_church_setup,
+      branches: snapshot.totals.branches,
+      programmes: snapshot.totals.programmes,
+      activeChurches30Days: snapshot.totals.active_churches_30_days,
     },
-    churches: churchRows,
-    recentAccounts,
+    growth: snapshot.growth,
+    churches: snapshot.churches,
+    recentAccounts: snapshot.recent_accounts,
   };
 }
