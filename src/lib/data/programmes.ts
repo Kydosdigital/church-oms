@@ -163,8 +163,6 @@ export async function createDraftProgramme(values: ProgrammeEntryValues) {
 
   if (!branch) throw new Error("Branch not found");
 
-  const preacherId = await resolvePrimaryPreacherId(supabase, branch.church_id, values);
-
   const total = totalAttendance(values);
   const capacity = venue?.default_capacity ?? 0;
   const capacityExceeded = exceedsCapacity(total, capacity);
@@ -189,6 +187,8 @@ export async function createDraftProgramme(values: ProgrammeEntryValues) {
   if (duplicate && values.duplicate_override && !values.duplicate_override_reason) {
     throw new Error("Add a reason for recording a duplicate service on the same day.");
   }
+
+  const preacherId = await resolvePrimaryPreacherId(supabase, branch.church_id, values);
 
   const { data: programme, error } = await supabase
     .from("programme_occurrences")
