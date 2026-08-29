@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { deactivateOfferingCategory, reactivateOfferingCategory } from "@/lib/data/revenue";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ProjectSettingsForm } from "@/components/forms/project-settings-form";
 import { formatCurrency, formatPercent, projectProgressPercent } from "@/lib/calculations";
+import { formatChurchDate } from "@/lib/locales";
 import type { OfferingCategory, FundraisingProject } from "@/types/domain";
 
 export function CategoryListItem({
@@ -44,49 +46,76 @@ export function CategoryListItem({
       : null;
 
   return (
-    <div className="p-4 flex flex-wrap items-center justify-between gap-4">
-      <div className="min-w-0 flex-1">
+    <div className="p-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-medium">{category.name}</p>
           <Badge>{category.category_type}</Badge>
           {!category.active && <Badge className="bg-surface-border/60 text-muted">Inactive</Badge>}
           {category.is_default && <Badge>Default</Badge>}
+          {project?.accepting_entries_after_end_override && (
+            <Badge className="bg-warning/10 text-warning">
+              After-end override enabled
+            </Badge>
+          )}
         </div>
         {category.description && <p className="text-sm text-muted mt-1">{category.description}</p>}
         {project && (
-          <p className="text-xs text-muted mt-1">
-            {project.target_amount ? (
-              cumulativeReceived === undefined ? (
-                <>
-                  Target {formatCurrency(project.target_amount, currencyCode, localeCode)} ·
-                  progress hidden without finance-history access
-                </>
+          <div className="mt-1 space-y-1 text-xs text-muted">
+            <p>
+              {project.target_amount ? (
+                cumulativeReceived === undefined ? (
+                  <>
+                    Target {formatCurrency(project.target_amount, currencyCode, localeCode)} ·
+                    progress hidden without finance-history access
+                  </>
+                ) : (
+                  <>
+                    Target {formatCurrency(project.target_amount, currencyCode, localeCode)} ·{" "}
+                    {formatPercent(progress)} achieved
+                  </>
+                )
               ) : (
-                <>
-                  Target {formatCurrency(project.target_amount, currencyCode, localeCode)} ·{" "}
-                  {formatPercent(progress)} achieved
-                </>
-              )
-            ) : (
-              "No target set"
-            )}
-          </p>
+                "No target set"
+              )}
+            </p>
+            <p>
+              Project window:{" "}
+              {project.start_date
+                ? formatChurchDate(project.start_date, localeCode)
+                : "No start date"}{" "}
+              →{" "}
+              {project.end_date
+                ? formatChurchDate(project.end_date, localeCode)
+                : "No end date"}
+            </p>
+          </div>
         )}
         {error && (
           <p className="mt-2 text-xs text-danger" aria-live="polite">
             {error}
           </p>
         )}
+        </div>
+        <Button variant="outline" size="sm" onClick={toggle} disabled={pending}>
+          {pending
+            ? category.active
+              ? "Deactivating…"
+              : "Reactivating…"
+            : category.active
+              ? "Deactivate"
+              : "Reactivate"}
+        </Button>
       </div>
-      <Button variant="outline" size="sm" onClick={toggle} disabled={pending}>
-        {pending
-          ? category.active
-            ? "Deactivating…"
-            : "Reactivating…"
-          : category.active
-            ? "Deactivate"
-            : "Reactivate"}
-      </Button>
+
+      {project && (
+        <ProjectSettingsForm
+          categoryId={category.id}
+          project={project}
+          currencyCode={currencyCode}
+        />
+      )}
     </div>
   );
 }
