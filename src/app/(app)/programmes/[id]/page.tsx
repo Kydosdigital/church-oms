@@ -7,10 +7,11 @@ import { StateBadge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { VerificationActions } from "@/components/forms/verification-actions";
+import { ProgrammeCorrectionForm } from "@/components/forms/programme-correction-form";
 import { capacityUtilization, formatPercent } from "@/lib/calculations";
 import { SignoffTimeline } from "@/components/workflow/signoff-timeline";
 import { formatChurchDate } from "@/lib/locales";
-import type { Signoff } from "@/types/domain";
+import type { Minister, Signoff } from "@/types/domain";
 
 export default async function ProgrammeDetailPage(props: PageProps<"/programmes/[id]">) {
   const { id } = await props.params;
@@ -20,7 +21,11 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
 
   const ctx = await getCurrentUserContext();
   const supabase = await createClient();
-  const [{ data: signoffsData }, { data: church }] = await Promise.all([
+  const [
+    { data: signoffsData },
+    { data: church },
+    { data: ministersData },
+  ] = await Promise.all([
     supabase
       .from("signoffs")
       .select("*, app_users(full_name)")
@@ -32,15 +37,15 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
       .select("timezone, locale_code")
       .eq("id", programme.church_id)
       .single(),
+    supabase
+      .from("ministers")
+      .select("*")
+      .order("full_name"),
   ]);
 
-  const { data: preacher } = programme.preacher_id
-    ? await supabase
-        .from("ministers")
-        .select("full_name, is_guest")
-        .eq("id", programme.preacher_id)
-        .maybeSingle()
-    : { data: null };
+  const ministers = (ministersData ?? []) as Minister[];
+  const preacher =
+    ministers.find((minister) => minister.id === programme.preacher_id) ?? null;
 
   const signoffs = (
     (signoffsData ?? []) as (Signoff & { app_users: { full_name: string } | null })[]
@@ -51,6 +56,15 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
 
   const canVerify = ctx?.permissions.canVerifyAttendance(programme.branch_id) ?? false;
   const canReopen = ctx?.permissions.isAdministrator() ?? false;
+  const canCorrect = Boolean(
+    ctx &&
+      ctx.user.id === programme.created_by &&
+      ["draft", "returned", "reopened"].includes(programme.state) &&
+      (
+        ctx.permissions.hasRole("usher", programme.branch_id) ||
+        ctx.permissions.isAdministrator()
+      )
+  );
   const canEnterFinance = ctx?.permissions.hasFinancePermission(programme.branch_id) ?? false;
   const canUseLiveCounter = Boolean(
     ctx && (
@@ -111,6 +125,14 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
             </Link>
           </div>
         </Card>
+      )}
+
+      {canCorrect && (
+        <ProgrammeCorrectionForm
+          programme={programme}
+          attendance={attendance}
+          ministers={ministers}
+        />
       )}
 
       <Card>
