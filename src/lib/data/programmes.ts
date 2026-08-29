@@ -82,6 +82,62 @@ export async function checkDuplicateService(
   return data ?? null;
 }
 
+async function resolvePrimaryPreacherId(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  churchId: string,
+  values: ProgrammeEntryValues
+): Promise<string | null> {
+  if (values.preacher_type === "none") return null;
+
+  if (values.preacher_type === "existing") {
+    if (!values.preacher_id) throw new Error("Select the preacher");
+
+    // Do not trust a posted UUID by itself. The selected minister must belong
+    // to the same church as the programme and still be active.
+    const { data: minister } = await supabase
+      .from("ministers")
+      .select("id")
+      .eq("id", values.preacher_id)
+      .eq("church_id", churchId)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (!minister) throw new Error("The selected preacher is not available for this church");
+    return minister.id;
+  }
+
+  const guestName = values.guest_preacher_name?.trim();
+  if (!guestName) throw new Error("Enter the guest preacher's name");
+
+  // Guest preachers are still stored as ministers so historic reporting keeps
+  // a stable person reference instead of a one-off text value. Reuse an exact
+  // existing guest record when possible to avoid duplicate names over time.
+  const { data: existingGuest } = await supabase
+    .from("ministers")
+    .select("id")
+    .eq("church_id", churchId)
+    .eq("full_name", guestName)
+    .eq("is_guest", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingGuest) return existingGuest.id;
+
+  const { data: guest, error } = await supabase
+    .from("ministers")
+    .insert({
+      church_id: churchId,
+      full_name: guestName,
+      is_guest: true,
+      active: true,
+    })
+    .select("id")
+    .single();
+
+  if (error) throw error;
+  return guest.id;
+}
+
 /** Creates a draft programme + its (initially empty) attendance record.
  * SRV-08 duplicate check happens client-side before calling this (warns, does
  * not hard-block) and server-side via the partial unique index as a backstop. */
@@ -106,6 +162,8 @@ export async function createDraftProgramme(values: ProgrammeEntryValues) {
     .single();
 
   if (!branch) throw new Error("Branch not found");
+
+  const preacherId = await resolvePrimaryPreacherId(supabase, branch.church_id, values);
 
   const total = totalAttendance(values);
   const capacity = venue?.default_capacity ?? 0;
@@ -142,7 +200,7 @@ export async function createDraftProgramme(values: ProgrammeEntryValues) {
       programme_date: values.programme_date,
       programme_name: values.programme_name,
       classification: values.classification,
-      preacher_id: values.preacher_id || null,
+      preacher_id: preacherId,
       sermon_topic: values.sermon_topic || null,
       venue_capacity_snapshot: capacity,
       notes: values.notes || null,
@@ -184,12 +242,15 @@ export async function updateDraftAttendance(programmeId: string, values: Program
 
   const { data: programme } = await supabase
     .from("programme_occurrences")
-    .select("venue_capacity_snapshot")
+    .select("church_id, venue_capacity_snapshot")
     .eq("id", programmeId)
     .single();
 
+  if (!programme) throw new Error("Programme not found");
+
+  const preacherId = await resolvePrimaryPreacherId(supabase, programme.church_id, values);
   const total = totalAttendance(values);
-  const capacity = programme?.venue_capacity_snapshot ?? 0;
+  const capacity = programme.venue_capacity_snapshot;
 
   if (exceedsCapacity(total, capacity) && !values.capacity_exception_note) {
     throw new Error("Attendance exceeds venue capacity — add an explanatory note (ATT-07).");
@@ -203,7 +264,7 @@ export async function updateDraftAttendance(programmeId: string, values: Program
     .update({
       programme_name: values.programme_name,
       classification: values.classification,
-      preacher_id: values.preacher_id || null,
+      preacher_id: preacherId,
       sermon_topic: values.sermon_topic || null,
       notes: values.notes || null,
     })
