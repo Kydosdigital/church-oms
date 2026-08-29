@@ -49,12 +49,14 @@ async function requireAdministrator() {
 export async function inviteUserWithRole(input: InviteUserWithRoleValues) {
   const { supabase, churchId, isSuperAdmin } = await requireAdministrator();
   const isInvitingSuperAdmin = input.role === "super_admin";
+  const isChurchwideRole =
+    isInvitingSuperAdmin || input.role === "administrator";
 
   if (isInvitingSuperAdmin && !isSuperAdmin) {
     throw new Error("Only a Super Admin can invite another Super Admin");
   }
 
-  const branchId = isInvitingSuperAdmin ? null : input.branch_id ?? null;
+  const branchId = isChurchwideRole ? null : input.branch_id ?? null;
 
   // Never trust a branch id supplied by the browser. If one was selected, it
   // must be an active branch belonging to the administrator's own church.
