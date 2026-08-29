@@ -42,17 +42,20 @@ export function UserRoleForm({
   const role = watch("role");
   const financePermission = watch("finance_permission");
   const isSuperAdminRole = role === "super_admin";
+  const isChurchwideRole = isSuperAdminRole || role === "administrator";
   const assignableRoles = appRoleValues.filter(
     (value) => canAssignSuperAdmin || value !== "super_admin"
   );
 
   useEffect(() => {
-    if (isSuperAdminRole) {
+    if (isChurchwideRole) {
       setValue("branch_id", undefined);
+    }
+    if (isSuperAdminRole) {
       setValue("finance_permission", true);
       setValue("finance_history_permission", true);
     }
-  }, [isSuperAdminRole, setValue]);
+  }, [isChurchwideRole, isSuperAdminRole, setValue]);
 
   async function onSubmit(data: ManagedUserRoleValues) {
     setPending(true);
@@ -60,7 +63,7 @@ export function UserRoleForm({
     try {
       await assignManagedUserRole({
         ...data,
-        branch_id: isSuperAdminRole ? undefined : data.branch_id || undefined,
+        branch_id: isChurchwideRole ? undefined : data.branch_id || undefined,
         finance_permission: isSuperAdminRole ? true : data.finance_permission,
         finance_history_permission: isSuperAdminRole ? true : data.finance_history_permission,
       });
@@ -101,7 +104,7 @@ export function UserRoleForm({
         <select
           id={`branch-${userId}`}
           {...register("branch_id")}
-          disabled={isSuperAdminRole}
+          disabled={isChurchwideRole}
           className="block rounded-brand border border-surface-border bg-background h-9 px-2 text-sm disabled:opacity-60"
         >
           <option value="">All branches</option>
@@ -116,6 +119,9 @@ export function UserRoleForm({
         <span className="text-xs text-brand h-9 flex items-center">Full church + finance access</span>
       ) : (
         <>
+          {role === "administrator" && (
+            <span className="text-xs text-brand h-9 flex items-center">Church-wide administration</span>
+          )}
           <label className="flex items-center gap-1.5 text-sm h-9">
             <input type="checkbox" className="h-4 w-4" {...register("finance_permission")} />
             Finance access
