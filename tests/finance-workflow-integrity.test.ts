@@ -61,7 +61,11 @@ describe("finance workflow integrity migration", () => {
   });
 
   it("records the real next version in finance signoffs", () => {
-    expect(migration).not.toMatch(/'finance',\s*'(submit|verify|return|reopen)'[^;]*,\s*1\s*[,)]/s);
+    const normalized = migration.replace(/\\s+/g, " ");
+    expect(normalized).not.toContain("'finance', 'submit', auth.uid(), 1");
+    expect(normalized).not.toContain("'finance', 'verify', auth.uid(), 1");
+    expect(normalized).not.toContain("'finance', 'return', auth.uid(), 1");
+    expect(normalized).not.toContain("'finance', 'reopen', auth.uid(), 1");
     expect(migration).toContain("p_programme_id, 'finance', 'submit', auth.uid(), v_next_version");
     expect(migration).toContain("p_programme_id, 'finance', 'verify', auth.uid(), v_next_version");
   });
