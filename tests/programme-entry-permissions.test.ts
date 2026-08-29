@@ -43,8 +43,16 @@ describe("programme entry permission hardening", () => {
     );
     expect(migration).toContain("grant insert (");
     expect(migration).toContain("grant update (");
-    expect(migration).not.toMatch(
-      /grant update \([^)]*(?:state|version|finance_state|finance_version)/s
+
+    const updateGrantStart = migration.indexOf("grant update (");
+    const updateGrantEnd = migration.indexOf(
+      ") on public.programme_occurrences to authenticated;",
+      updateGrantStart
     );
+    const updateGrant = migration.slice(updateGrantStart, updateGrantEnd);
+    expect(updateGrant).not.toContain("state");
+    expect(updateGrant).not.toContain("version");
+    expect(updateGrant).not.toContain("finance_state");
+    expect(updateGrant).not.toContain("finance_version");
   });
 });
