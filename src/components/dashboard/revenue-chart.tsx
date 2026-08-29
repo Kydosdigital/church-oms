@@ -14,7 +14,15 @@ import type { RevenueTrendPoint } from "@/lib/data/dashboards";
 
 const PALETTE = ["var(--brand)", "var(--success)", "var(--warning)", "var(--info)", "var(--danger)"];
 
-export function RevenueChart({ data, currencyCode }: { data: RevenueTrendPoint[]; currencyCode: string }) {
+export function RevenueChart({
+  data,
+  currencyCode,
+  localeCode,
+}: {
+  data: RevenueTrendPoint[];
+  currencyCode: string;
+  localeCode: string;
+}) {
   if (data.length === 0) {
     return <p className="text-sm text-muted">No verified revenue records in this period yet.</p>;
   }
@@ -33,7 +41,10 @@ export function RevenueChart({ data, currencyCode }: { data: RevenueTrendPoint[]
     .map(([programme_date, values]) => ({ programme_date, ...values }))
     .sort((a, b) => a.programme_date.localeCompare(b.programme_date));
 
-  const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: currencyCode });
+  const formatter = new Intl.NumberFormat(localeCode, {
+    style: "currency",
+    currency: currencyCode,
+  });
 
   return (
     <ResponsiveContainer width="100%" height={280}>
