@@ -28,11 +28,14 @@ export default async function ProgrammeCounterPage(props: PageProps<"/programmes
   const localeCode = church?.locale_code ?? "en-GB";
 
   const isAdministrator = ctx.permissions.isAdministrator();
-  const canCount = ctx.permissions.hasRole("usher", programme.branch_id) || isAdministrator;
+  const workflowEditable = ["draft", "returned", "reopened"].includes(programme.state);
+  const hasUsherRole = ctx.permissions.hasRole("usher", programme.branch_id);
   const canVerify = ctx.permissions.canVerifyAttendance(programme.branch_id);
   const canReview = canVerify || ctx.permissions.hasRole("pastor") || isAdministrator;
-  const canClose = canVerify || isAdministrator;
-  const canOpen = canCount || canVerify || isAdministrator;
+  const canCount = workflowEditable && (hasUsherRole || isAdministrator);
+  const canClose = workflowEditable && (canVerify || isAdministrator);
+  const canOpen =
+    workflowEditable && (hasUsherRole || canVerify || isAdministrator);
 
   if (!canCount && !canReview) {
     redirect(`/programmes/${id}`);

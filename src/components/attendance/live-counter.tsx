@@ -666,11 +666,7 @@ export function LiveCounter({
               <Button
                 variant="outline"
                 onClick={closeCounter}
-                disabled={
-                  closing ||
-                  submittedCount === 0 ||
-                  countingCount > 0
-                }
+                disabled={closing || countingCount > 0}
               >
                 {closing ? "Closing…" : "Close counter"}
               </Button>

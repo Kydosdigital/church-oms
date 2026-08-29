@@ -66,12 +66,22 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
       )
   );
   const canEnterFinance = ctx?.permissions.hasFinancePermission(programme.branch_id) ?? false;
-  const canUseLiveCounter = Boolean(
+  const counterEditable = ["draft", "returned", "reopened"].includes(programme.state);
+  const canReviewLiveCounter = Boolean(
     ctx && (
-      ctx.permissions.hasRole("usher", programme.branch_id) ||
       ctx.permissions.hasRole("attendance_verifier", programme.branch_id) ||
       ctx.permissions.hasRole("pastor") ||
       ctx.permissions.isAdministrator()
+    )
+  );
+  const canUseLiveCounter = Boolean(
+    ctx && (
+      (counterEditable && (
+        ctx.permissions.hasRole("usher", programme.branch_id) ||
+        ctx.permissions.hasRole("attendance_verifier", programme.branch_id) ||
+        ctx.permissions.isAdministrator()
+      )) ||
+      canReviewLiveCounter
     )
   );
 
@@ -117,11 +127,13 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
             <div>
               <p className="font-semibold">Live attendance counter</p>
               <p className="mt-1 text-sm text-muted">
-                Let multiple ushers tap their own counters and combine every doorway into one live total.
+                {counterEditable
+                  ? "Let multiple ushers tap their own counters and combine every doorway into one live total."
+                  : "Review the final live-counter evidence captured for this attendance record."}
               </p>
             </div>
             <Link href={`/programmes/${programme.id}/counter`}>
-              <Button>Open live counter</Button>
+              <Button>{counterEditable ? "Open live counter" : "View live counter"}</Button>
             </Link>
           </div>
         </Card>
