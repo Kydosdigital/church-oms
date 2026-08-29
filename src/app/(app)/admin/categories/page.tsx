@@ -88,6 +88,7 @@ export default async function CategoriesAdminPage() {
                 key={category.id}
                 category={category}
                 currencyCode={currencyCode}
+                localeCode={localeCode}
                 cumulativeReceived={cumulativeByCategory[category.id]}
               />
             ))}
