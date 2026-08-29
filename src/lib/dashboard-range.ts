@@ -91,11 +91,14 @@ export function resolveDashboardRange(
     if (validIsoDate(from) && validIsoDate(to) && from! <= to!) {
       return { preset, from: from!, to: to!, label: "Custom range" };
     }
+
+    // Entering Custom for the first time should reveal sensible editable
+    // defaults rather than bouncing the user back to the 90-day preset.
     return {
-      preset: "90d",
+      preset: "custom",
       from: format(subDays(now, 90), "yyyy-MM-dd"),
       to: today,
-      label: "Last 90 days",
+      label: "Custom range",
     };
   }
 
