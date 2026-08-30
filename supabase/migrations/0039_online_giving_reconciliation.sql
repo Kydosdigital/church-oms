@@ -105,10 +105,10 @@ using (
 
 -- Mutations go through validated RPCs below. Keep browser clients read-only at
 -- table level so branch/church/match metadata cannot be crafted directly.
-revoke insert, update, delete on public.online_giving_batches
-  from authenticated, anon;
-revoke insert, update, delete on public.online_giving_transactions
-  from authenticated, anon;
+revoke all on public.online_giving_batches from public, anon;
+revoke all on public.online_giving_transactions from public, anon;
+revoke insert, update, delete on public.online_giving_batches from authenticated;
+revoke insert, update, delete on public.online_giving_transactions from authenticated;
 grant select on public.online_giving_batches to authenticated;
 grant select on public.online_giving_transactions to authenticated;
 
