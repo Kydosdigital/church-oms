@@ -44,6 +44,12 @@ export interface OnlineGivingReconciliationData {
   programmes: ReconciliationProgrammeOption[];
   categories: ReconciliationCategoryOption[];
   summary: ProgrammeReconciliationSummary[];
+  counts: {
+    batches: number;
+    unmatched: number;
+    matched: number;
+    ignored: number;
+  };
 }
 
 export type ReconciliationStatus = "all" | "unmatched" | "matched" | "ignored";
@@ -224,6 +230,10 @@ export async function getOnlineGivingReconciliationData(
     { data: programmes, error: programmeError },
     { data: categories, error: categoryError },
     summary,
+    { count: batchCount },
+    { count: unmatchedCount },
+    { count: matchedCount },
+    { count: ignoredCount },
   ] = await Promise.all([
     transactionQuery,
     supabase
@@ -240,6 +250,25 @@ export async function getOnlineGivingReconciliationData(
       .limit(100),
     supabase.from("offering_categories").select("id, name").order("name"),
     buildProgrammeSummary(branchId),
+    supabase
+      .from("online_giving_batches")
+      .select("id", { count: "exact", head: true })
+      .eq("branch_id", branchId),
+    supabase
+      .from("online_giving_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("branch_id", branchId)
+      .eq("status", "unmatched"),
+    supabase
+      .from("online_giving_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("branch_id", branchId)
+      .eq("status", "matched"),
+    supabase
+      .from("online_giving_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("branch_id", branchId)
+      .eq("status", "ignored"),
   ]);
 
   if (transactionError) throw transactionError;
@@ -253,6 +282,12 @@ export async function getOnlineGivingReconciliationData(
     programmes: programmes ?? [],
     categories: categories ?? [],
     summary,
+    counts: {
+      batches: batchCount ?? 0,
+      unmatched: unmatchedCount ?? 0,
+      matched: matchedCount ?? 0,
+      ignored: ignoredCount ?? 0,
+    },
   };
 }
 
