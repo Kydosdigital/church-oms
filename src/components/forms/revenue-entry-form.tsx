@@ -37,6 +37,37 @@ function actionError(error: unknown, fallback: string) {
   return message;
 }
 
+function financeWorkflowMessage(
+  state: RecordState,
+  canEnter: boolean,
+  canVerify: boolean,
+  canReopen: boolean
+) {
+  if (state === "submitted") {
+    return canVerify
+      ? "This finance record has been digitally signed and submitted. Review the amounts below, then verify and lock the record or return it for correction."
+      : "This finance record has been digitally signed and submitted. It is waiting for an authorised Finance Verifier.";
+  }
+  if (state === "verified") {
+    return canReopen
+      ? "This finance record is verified and locked. Reopening it requires a reason and starts a new correction and verification cycle."
+      : "This finance record is verified and locked against normal edits.";
+  }
+  if (state === "returned") {
+    return canEnter
+      ? "This finance record was returned for correction. Update the amounts, then sign and submit it again for verification."
+      : "This finance record was returned for correction and is waiting for an authorised finance editor.";
+  }
+  if (state === "reopened") {
+    return canEnter
+      ? "This previously verified finance record was reopened for correction. Update it, then sign and submit it through verification again."
+      : "This previously verified finance record was reopened and is waiting for an authorised finance editor.";
+  }
+  return canEnter
+    ? "This is an unsigned draft. Save to keep working, or Sign & submit when the amounts are ready for verification."
+    : "This finance record is still an unsigned draft.";
+}
+
 export function RevenueEntryForm({
   programmeId,
   categories,
@@ -72,6 +103,12 @@ export function RevenueEntryForm({
     const amount = amounts[cat.id];
     return sum + categoryTotal(Number(amount?.physical || 0), Number(amount?.online || 0));
   }, 0);
+  const workflowMessage = financeWorkflowMessage(
+    financeState,
+    canEnter,
+    canVerify,
+    canReopen
+  );
 
   function currentEntries() {
     return categories.map((cat) => ({
@@ -177,6 +214,30 @@ export function RevenueEntryForm({
         <StateBadge state={financeState} />
       </div>
 
+      <div className="rounded-brand border border-brand/20 bg-brand-muted/30 p-4 space-y-2">
+        <p className="text-sm font-medium text-brand">Finance workflow</p>
+        <p className="text-sm text-muted">{workflowMessage}</p>
+        <p className="text-xs text-muted">
+          Sign &amp; submit creates a digital sign-off and sends the record to verification. Where
+          independent finance verification is enabled, the verifier must be a different user.
+        </p>
+      </div>
+
+      <div className="rounded-brand border border-surface-border p-4 space-y-2">
+        <p className="text-sm font-medium">How to record giving</p>
+        <p className="text-sm text-muted">
+          <strong className="text-foreground">Physical</strong> is the amount from the in-person
+          collection for this service. <strong className="text-foreground">Online</strong> is money
+          received through bank transfer, online giving or another digital channel that can be
+          attributed to this programme and category.
+        </p>
+        <p className="text-xs text-muted">
+          Do not guess a category from an unexplained bank total or split it across categories just
+          to make the totals match. Reconcile the source first. If the church needs a general or
+          unallocated reconciliation category, an Administrator can configure one explicitly.
+        </p>
+      </div>
+
       {categories.length === 0 ? (
         <div className="rounded-brand border border-surface-border p-4 text-sm text-muted">
           No active offering categories are available for this church yet. An administrator can
@@ -187,8 +248,7 @@ export function RevenueEntryForm({
           {categories.map((cat) => {
             const amount = amounts[cat.id] ?? { physical: "0", online: "0" };
             const rowTotal = categoryTotal(
-              Number(amount.physical || 0),
-              Number(amount.online || 0)
+              Number(amount.physical || 0), Number(amount.online || 0)
             );
             return (
               <div key={cat.id} className="rounded-brand border border-surface-border p-3">
@@ -199,6 +259,7 @@ export function RevenueEntryForm({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor={`physical-${cat.id}`}>Physical</Label>
+                    <p className="mb-1 text-xs text-muted">In-person collection for this category</p>
                     <input
                       id={`physical-${cat.id}`}
                       type="number"
@@ -218,6 +279,7 @@ export function RevenueEntryForm({
                   </div>
                   <div>
                     <Label htmlFor={`online-${cat.id}`}>Online</Label>
+                    <p className="mb-1 text-xs text-muted">Digital giving attributable to this category</p>
                     <input
                       id={`online-${cat.id}`}
                       type="number"
@@ -274,7 +336,7 @@ export function RevenueEntryForm({
       {financeState === "submitted" && canVerify && (
         <div className="space-y-2">
           <Button onClick={handleVerify} disabled={pending}>
-            {pendingAction === "verify" ? "Verifying…" : "Verify"}
+            {pendingAction === "verify" ? "Verifying…" : "Verify and lock"}
           </Button>
           <Textarea
             placeholder="Reason for returning (required)…"
@@ -307,7 +369,7 @@ export function RevenueEntryForm({
             onClick={handleReopen}
             disabled={pending || reason.trim().length < 3}
           >
-            {pendingAction === "reopen" ? "Reopening…" : "Reopen"}
+            {pendingAction === "reopen" ? "Reopening…" : "Reopen for correction"}
           </Button>
         </div>
       )}
