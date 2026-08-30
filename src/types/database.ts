@@ -534,6 +534,167 @@ export type Database = {
           },
         ]
       }
+      online_giving_batches: {
+        Row: {
+          branch_id: string
+          church_id: string
+          created_at: string
+          file_hash: string
+          file_name: string | null
+          id: string
+          imported_by: string
+          row_count: number
+          source_name: string
+          total_amount: number
+        }
+        Insert: {
+          branch_id: string
+          church_id: string
+          created_at?: string
+          file_hash: string
+          file_name?: string | null
+          id?: string
+          imported_by: string
+          row_count: number
+          source_name: string
+          total_amount: number
+        }
+        Update: {
+          branch_id?: string
+          church_id?: string
+          created_at?: string
+          file_hash?: string
+          file_name?: string | null
+          id?: string
+          imported_by?: string
+          row_count?: number
+          source_name?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "online_giving_batches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_giving_batches_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_giving_batches_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      online_giving_transactions: {
+        Row: {
+          amount: number
+          batch_id: string
+          branch_id: string
+          church_id: string
+          created_at: string
+          external_id: string | null
+          id: string
+          match_note: string | null
+          matched_at: string | null
+          matched_by: string | null
+          matched_category_id: string | null
+          matched_programme_id: string | null
+          reference: string | null
+          source_name: string
+          status: string
+          transaction_date: string
+        }
+        Insert: {
+          amount: number
+          batch_id: string
+          branch_id: string
+          church_id: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          match_note?: string | null
+          matched_at?: string | null
+          matched_by?: string | null
+          matched_category_id?: string | null
+          matched_programme_id?: string | null
+          reference?: string | null
+          source_name: string
+          status?: string
+          transaction_date: string
+        }
+        Update: {
+          amount?: number
+          batch_id?: string
+          branch_id?: string
+          church_id?: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          match_note?: string | null
+          matched_at?: string | null
+          matched_by?: string | null
+          matched_category_id?: string | null
+          matched_programme_id?: string | null
+          reference?: string | null
+          source_name?: string
+          status?: string
+          transaction_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "online_giving_transactions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "online_giving_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_giving_transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_giving_transactions_church_id_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_giving_transactions_matched_by_fkey"
+            columns: ["matched_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_giving_transactions_matched_category_id_fkey"
+            columns: ["matched_category_id"]
+            isOneToOne: false
+            referencedRelation: "offering_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_giving_transactions_matched_programme_id_fkey"
+            columns: ["matched_programme_id"]
+            isOneToOne: false
+            referencedRelation: "programme_occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_admins: {
         Row: {
           active: boolean
@@ -976,6 +1137,38 @@ export type Database = {
             }
             Returns: string
           }
+      create_programme_entry: {
+        Args: { p_entry: Json; p_submit?: boolean }
+        Returns: {
+          branch_id: string
+          church_id: string
+          classification: Database["public"]["Enums"]["programme_classification"]
+          created_at: string
+          created_by: string
+          duplicate_override: boolean
+          duplicate_override_reason: string | null
+          finance_state: Database["public"]["Enums"]["record_state"]
+          finance_version: number
+          id: string
+          notes: string | null
+          preacher_id: string | null
+          programme_date: string
+          programme_name: string
+          sermon_topic: string | null
+          service_type_id: string
+          state: Database["public"]["Enums"]["record_state"]
+          updated_at: string
+          venue_capacity_snapshot: number
+          venue_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "programme_occurrences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_church_id: { Args: never; Returns: string }
       has_finance_history_permission: {
         Args: { p_branch_id?: string }
@@ -992,6 +1185,43 @@ export type Database = {
         }
         Returns: boolean
       }
+      ignore_online_giving_transaction: {
+        Args: { p_reason: string; p_transaction_id: string }
+        Returns: {
+          amount: number
+          batch_id: string
+          branch_id: string
+          church_id: string
+          created_at: string
+          external_id: string | null
+          id: string
+          match_note: string | null
+          matched_at: string | null
+          matched_by: string | null
+          matched_category_id: string | null
+          matched_programme_id: string | null
+          reference: string | null
+          source_name: string
+          status: string
+          transaction_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "online_giving_transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      import_online_giving_batch: {
+        Args: {
+          p_branch_id: string
+          p_file_hash: string
+          p_file_name: string
+          p_source_name: string
+          p_transactions: Json
+        }
+        Returns: string
+      }
       increment_attendance_counter: {
         Args: { p_delta?: number; p_session_id: string }
         Returns: number
@@ -999,6 +1229,38 @@ export type Database = {
       is_administrator: { Args: never; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      match_online_giving_transaction: {
+        Args: {
+          p_category_id?: string
+          p_note?: string
+          p_programme_id: string
+          p_transaction_id: string
+        }
+        Returns: {
+          amount: number
+          batch_id: string
+          branch_id: string
+          church_id: string
+          created_at: string
+          external_id: string | null
+          id: string
+          match_note: string | null
+          matched_at: string | null
+          matched_by: string | null
+          matched_category_id: string | null
+          matched_programme_id: string | null
+          reference: string | null
+          source_name: string
+          status: string
+          transaction_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "online_giving_transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       open_attendance_counter: {
         Args: { p_programme_id: string }
         Returns: {
@@ -1219,6 +1481,43 @@ export type Database = {
               isSetofReturn: true
             }
           }
+      save_finance_entry_set: {
+        Args: {
+          p_entries: Json
+          p_expected_version: number
+          p_programme_id: string
+          p_submit?: boolean
+        }
+        Returns: {
+          branch_id: string
+          church_id: string
+          classification: Database["public"]["Enums"]["programme_classification"]
+          created_at: string
+          created_by: string
+          duplicate_override: boolean
+          duplicate_override_reason: string | null
+          finance_state: Database["public"]["Enums"]["record_state"]
+          finance_version: number
+          id: string
+          notes: string | null
+          preacher_id: string | null
+          programme_date: string
+          programme_name: string
+          sermon_topic: string | null
+          service_type_id: string
+          state: Database["public"]["Enums"]["record_state"]
+          updated_at: string
+          venue_capacity_snapshot: number
+          venue_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "programme_occurrences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_church_user_active: {
         Args: { p_active: boolean; p_user_id: string }
         Returns: undefined
@@ -1308,6 +1607,70 @@ export type Database = {
               isSetofReturn: true
             }
           }
+      unmatch_online_giving_transaction: {
+        Args: { p_transaction_id: string }
+        Returns: {
+          amount: number
+          batch_id: string
+          branch_id: string
+          church_id: string
+          created_at: string
+          external_id: string | null
+          id: string
+          match_note: string | null
+          matched_at: string | null
+          matched_by: string | null
+          matched_category_id: string | null
+          matched_programme_id: string | null
+          reference: string | null
+          source_name: string
+          status: string
+          transaction_date: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "online_giving_transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_programme_entry: {
+        Args: {
+          p_entry: Json
+          p_expected_version: number
+          p_programme_id: string
+          p_submit?: boolean
+        }
+        Returns: {
+          branch_id: string
+          church_id: string
+          classification: Database["public"]["Enums"]["programme_classification"]
+          created_at: string
+          created_by: string
+          duplicate_override: boolean
+          duplicate_override_reason: string | null
+          finance_state: Database["public"]["Enums"]["record_state"]
+          finance_version: number
+          id: string
+          notes: string | null
+          preacher_id: string | null
+          programme_date: string
+          programme_name: string
+          sermon_topic: string | null
+          service_type_id: string
+          state: Database["public"]["Enums"]["record_state"]
+          updated_at: string
+          venue_capacity_snapshot: number
+          venue_id: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "programme_occurrences"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       user_branch_ids: {
         Args: { p_role?: Database["public"]["Enums"]["app_role"] }
         Returns: string[]
