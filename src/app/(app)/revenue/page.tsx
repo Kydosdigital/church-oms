@@ -44,13 +44,23 @@ export default async function RevenueListPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-semibold">Revenue</h1>
-        <p className="text-sm text-muted">
-          {canHistory
-            ? "Enter or review summarized offerings by programme."
-            : "Your current offering entries — past services and other users' entries aren't shown."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">Revenue</h1>
+          <p className="text-sm text-muted">
+            {canHistory
+              ? "Enter or review summarized offerings by programme."
+              : "Your current offering entries — past services and other users' entries aren't shown."}
+          </p>
+        </div>
+        {canHistory && (
+          <Link
+            href="/revenue/reconciliation"
+            className="inline-flex h-11 items-center justify-center rounded-brand border border-surface-border px-4 text-sm font-medium hover:bg-surface"
+          >
+            Reconcile online giving
+          </Link>
+        )}
       </div>
 
       <div className="divide-y divide-surface-border rounded-brand border border-surface-border overflow-hidden">
