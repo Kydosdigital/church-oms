@@ -47,6 +47,13 @@ describe("online giving reconciliation migration", () => {
     );
   });
 
+  it("uses the hardened private authorization helpers", () => {
+    expect(migration).toContain("private.current_church_id()");
+    expect(migration).toContain("private.user_branch_ids()");
+    expect(migration).toContain("private.has_finance_history_permission(");
+    expect(migration).not.toContain("public.current_church_id()");
+  });
+
   it("audits import, match, unmatch and ignore actions", () => {
     expect(migration).toContain("'online_giving_import'");
     expect(migration).toContain("'online_giving_match'");
