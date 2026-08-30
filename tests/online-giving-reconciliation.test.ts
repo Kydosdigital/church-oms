@@ -15,7 +15,7 @@ describe("online giving reconciliation migration", () => {
     expect(migration).toContain("create table if not exists public.online_giving_batches");
     expect(migration).toContain("create table if not exists public.online_giving_transactions");
     expect(migration).toContain("branch_id uuid not null");
-    expect(migration).toContain("finance-history permission is required");
+    expect(migration).toContain("Finance-history permission is required");
   });
 
   it("does not store donor names", () => {
