@@ -25,6 +25,10 @@ const ACTIONS = [
   "counter_submit",
   "counter_resume",
   "counter_station_claim",
+  "online_giving_import",
+  "online_giving_match",
+  "online_giving_unmatch",
+  "online_giving_ignore",
 ];
 
 export default async function AuditLogPage(props: PageProps<"/admin/audit">) {
