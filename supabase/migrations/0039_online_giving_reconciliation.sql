@@ -87,9 +87,9 @@ on public.online_giving_batches
 for select
 to authenticated
 using (
-  church_id = public.current_church_id()
-  and branch_id in (select public.user_branch_ids())
-  and public.has_finance_history_permission(branch_id)
+  church_id = private.current_church_id()
+  and branch_id in (select private.user_branch_ids())
+  and private.has_finance_history_permission(branch_id)
 );
 
 drop policy if exists online_giving_transactions_select on public.online_giving_transactions;
@@ -98,9 +98,9 @@ on public.online_giving_transactions
 for select
 to authenticated
 using (
-  church_id = public.current_church_id()
-  and branch_id in (select public.user_branch_ids())
-  and public.has_finance_history_permission(branch_id)
+  church_id = private.current_church_id()
+  and branch_id in (select private.user_branch_ids())
+  and private.has_finance_history_permission(branch_id)
 );
 
 -- Mutations go through validated RPCs below. Keep browser clients read-only at
@@ -151,7 +151,7 @@ begin
     raise exception 'Branch is not available for this user';
   end if;
 
-  if not public.has_finance_history_permission(p_branch_id) then
+  if not private.has_finance_history_permission(p_branch_id) then
     raise exception 'Finance-history permission is required for reconciliation';
   end if;
 
@@ -324,11 +324,11 @@ begin
     raise exception 'Online transaction not found';
   end if;
 
-  if v_tx.church_id is distinct from public.current_church_id()
-     or not public.has_finance_history_permission(v_tx.branch_id)
+  if v_tx.church_id is distinct from private.current_church_id()
+     or not private.has_finance_history_permission(v_tx.branch_id)
      or not exists (
        select 1
-       from public.user_branch_ids() branch_id
+       from private.user_branch_ids() branch_id
        where branch_id = v_tx.branch_id
      ) then
     raise exception 'Not authorized to reconcile this transaction';
@@ -430,10 +430,10 @@ begin
     raise exception 'Online transaction not found';
   end if;
 
-  if v_tx.church_id is distinct from public.current_church_id()
-     or not public.has_finance_history_permission(v_tx.branch_id)
+  if v_tx.church_id is distinct from private.current_church_id()
+     or not private.has_finance_history_permission(v_tx.branch_id)
      or not exists (
-       select 1 from public.user_branch_ids() branch_id
+       select 1 from private.user_branch_ids() branch_id
        where branch_id = v_tx.branch_id
      ) then
     raise exception 'Not authorized to reconcile this transaction';
@@ -514,10 +514,10 @@ begin
     raise exception 'Online transaction not found';
   end if;
 
-  if v_tx.church_id is distinct from public.current_church_id()
-     or not public.has_finance_history_permission(v_tx.branch_id)
+  if v_tx.church_id is distinct from private.current_church_id()
+     or not private.has_finance_history_permission(v_tx.branch_id)
      or not exists (
-       select 1 from public.user_branch_ids() branch_id
+       select 1 from private.user_branch_ids() branch_id
        where branch_id = v_tx.branch_id
      ) then
     raise exception 'Not authorized to reconcile this transaction';
