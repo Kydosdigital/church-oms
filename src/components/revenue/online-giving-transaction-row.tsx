@@ -236,11 +236,13 @@ export function OnlineGivingTransactionRow({
               className="block h-11 w-full rounded-brand border border-surface-border bg-background px-3 text-sm"
             >
               <option value="">Whole service / not classified</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
+              {categories
+                .filter((category) => category.active)
+                .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
             </select>
           </div>
 
