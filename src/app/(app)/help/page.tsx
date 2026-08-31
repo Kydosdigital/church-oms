@@ -26,6 +26,17 @@ const GUIDES: { role: string; summary: string; steps: string[] }[] = [
     ],
   },
   {
+    role: "Live counter",
+    summary: "Lets several authorized attendance workers count arrivals together without sharing an account.",
+    steps: [
+      "Open Live counter and choose the programme you are counting. Each usher should sign in with their own invited account, not a shared head-usher login.",
+      "Agree who is counting which door, entrance or stream before tapping. Two people should not count the same arrivals, because the combined total adds authorized counters together.",
+      "Use your own phone for your own count. The live counter is an operational aid, not a replacement for the church's paper or manual counting fallback.",
+      "When the attendance workflow has moved beyond the editable counting stage, the counter becomes review-only rather than allowing late taps to change a locked record.",
+      "If the usual head usher is absent, another already-invited person with the appropriate usher or attendance access can carry out the work. Ask an Administrator to invite or assign cover before the service when possible.",
+    ],
+  },
+  {
     role: "Treasurer",
     summary: "Records what was given at a service, by category and by physical/online channel.",
     steps: [
@@ -60,10 +71,33 @@ const GUIDES: { role: string; summary: string; steps: string[] }[] = [
     steps: [
       "Branches & venues: add branches and their venues, each with a default capacity used for the capacity-exceeded warning.",
       "Offering categories: configure general, project and special giving categories.",
-      "Users & roles: invite people by email, assign roles per branch (or church-wide), and independently toggle finance access and \"view past financial records\" per person.",
+      "Users & roles: invite each person by email and give them only the roles they need. Do not create a shared head-usher or team login; individual accounts preserve auditability and let another authorized person cover when someone is absent.",
+      "For attendance continuity, assign suitable usher or verifier access to more than one person where the church needs cover. The normal submitter and verifier must still be different people.",
       "Church settings: currency, timezone, the month your reporting year starts, and whether finance records require a second, independent verifier.",
       "Audit log: a read-only, unchangeable trail of every create/edit/verify/reopen action, for accountability.",
-      "As administrator you don't automatically see finance data — assign yourself finance_permission explicitly if you need it, same as anyone else.",
+      "Administrator is church-wide, but it does not automatically include finance visibility or the ability to grant Super Admin. Finance access stays explicit.",
+    ],
+  },
+  {
+    role: "Super Admin",
+    summary: "Has full church-level governance, including the ability to appoint or remove other Super Admins.",
+    steps: [
+      "Super Admin is church-wide and includes complete finance visibility plus the Administrator capabilities used to manage the church.",
+      "Only a Super Admin can grant or remove Super Admin access. Ordinary Administrators cannot use their user-management access to escalate themselves or someone else into this role.",
+      "Use Users & roles to grant Super Admin only to people who genuinely need full governance. The system also keeps the companion Administrator access that Super Admin includes.",
+      "Keep at least one appropriate Super Admin available for governance continuity. Removing ordinary Administrator access separately from an active Super Admin is intentionally blocked.",
+      "Platform Owner access is separate. Being a church Super Admin does not grant cross-church platform analytics or platform-level authority.",
+    ],
+  },
+  {
+    role: "Platform Owner",
+    summary: "Views platform-level adoption and operational signals without turning platform access into church-level Super Admin authority.",
+    steps: [
+      "Open Platform Owner from the navigation when your account has platform access.",
+      "The overview shows cross-platform counts, growth, recent churches and account activity using server-side platform analytics.",
+      "Platform access is a separate authorization path from church roles. It does not make you a church Super Admin and must not be used as a shortcut around a tenant's normal permissions.",
+      "Use Back to my church to return to the church application. Once there, normal church roles, branch scope and finance permissions apply.",
+      "Treat platform information as operational oversight data. Church workflows and tenant-scoped actions should continue through the church's own governed roles.",
     ],
   },
 ];
