@@ -199,7 +199,7 @@ export function OnlineGivingTransactionRow({
                   {formatChurchDate(programme.programme_date, localeCode)} ·{" "}
                   {programme.programme_name}
                 </option>
-                ))}
+              ))}
             </select>
             <div className="mt-2 flex flex-wrap gap-2">
               <Input
@@ -239,10 +239,10 @@ export function OnlineGivingTransactionRow({
               {categories
                 .filter((category) => category.active)
                 .map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
             </select>
           </div>
 
