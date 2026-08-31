@@ -25,6 +25,7 @@ export interface ReconciliationProgrammeOption {
 export interface ReconciliationCategoryOption {
   id: string;
   name: string;
+  active: boolean;
 }
 
 export interface ProgrammeReconciliationSummary {
@@ -178,7 +179,10 @@ export async function getOnlineGivingReconciliationData(
       .eq("branch_id", branchId)
       .order("programme_date", { ascending: false })
       .limit(100),
-    supabase.from("offering_categories").select("id, name").order("name"),
+    supabase
+      .from("offering_categories")
+      .select("id, name, active")
+      .order("name"),
     buildProgrammeSummary(branchId),
     supabase
       .from("online_giving_batches")
