@@ -319,7 +319,6 @@ export interface OnlineGivingImportInput {
   branch_id: string;
   source_name: string;
   file_name: string;
-  file_hash: string;
   transactions: {
     transaction_date: string;
     amount: number;
@@ -337,7 +336,6 @@ export async function importOnlineGivingBatchAction(
     p_branch_id: input.branch_id,
     p_source_name: input.source_name,
     p_file_name: input.file_name,
-    p_file_hash: input.file_hash,
     p_transactions: input.transactions as unknown as Json,
   });
 
