@@ -14,13 +14,6 @@ import { formatCurrency } from "@/lib/calculations";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 
-async function sha256Hex(file: File) {
-  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 export function OnlineGivingImport({
   branchId,
   branchName,
@@ -73,12 +66,10 @@ export function OnlineGivingImport({
     setNotice(null);
 
     try {
-      const fileHash = await sha256Hex(file);
       const input: OnlineGivingImportInput = {
         branch_id: branchId,
         source_name: sourceName.trim(),
         file_name: file.name,
-        file_hash: fileHash,
         transactions: preview.rows,
       };
 
