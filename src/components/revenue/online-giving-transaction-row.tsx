@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ignoreOnlineGivingTransactionAction,
   matchOnlineGivingTransactionAction,
+  searchReconciliationProgrammesAction,
   unmatchOnlineGivingTransactionAction,
   type OnlineGivingTransaction,
   type ReconciliationCategoryOption,
@@ -37,6 +38,14 @@ export function OnlineGivingTransactionRow({
     [programmes, transaction.transaction_date]
   );
   const [programmeId, setProgrammeId] = useState(suggestedProgramme);
+  const [serviceSearch, setServiceSearch] = useState("");
+  const [serviceResults, setServiceResults] = useState<
+    ReconciliationProgrammeOption[]
+  >([]);
+  const [serviceSearching, setServiceSearching] = useState(false);
+  const [serviceSearchMessage, setServiceSearchMessage] = useState<string | null>(
+    null
+  );
   const [categoryId, setCategoryId] = useState("");
   const [note, setNote] = useState("");
   const [ignoreReason, setIgnoreReason] = useState("");
@@ -44,12 +53,56 @@ export function OnlineGivingTransactionRow({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const matchedProgramme = programmes.find(
+  const availableProgrammes = useMemo(() => {
+    const options = new Map(
+      programmes.map((programme) => [programme.id, programme])
+    );
+    for (const programme of serviceResults) {
+      options.set(programme.id, programme);
+    }
+    return Array.from(options.values()).sort(
+      (a, b) =>
+        b.programme_date.localeCompare(a.programme_date) ||
+        a.programme_name.localeCompare(b.programme_name)
+    );
+  }, [programmes, serviceResults]);
+
+  const matchedProgramme = availableProgrammes.find(
     (programme) => programme.id === transaction.matched_programme_id
   );
   const matchedCategory = categories.find(
     (category) => category.id === transaction.matched_category_id
   );
+
+  async function searchServices() {
+    const query = serviceSearch.trim();
+    if (query.length < 2) {
+      setServiceSearchMessage("Enter at least 2 letters from the service name.");
+      return;
+    }
+
+    setServiceSearching(true);
+    setServiceSearchMessage(null);
+    setError(null);
+    try {
+      const results = await searchReconciliationProgrammesAction(
+        transaction.branch_id,
+        query
+      );
+      setServiceResults(results);
+      setServiceSearchMessage(
+        results.length === 0
+          ? "No matching services found."
+          : `Found ${results.length} service${results.length === 1 ? "" : "s"}. Choose one above.`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not search older services."
+      );
+    } finally {
+      setServiceSearching(false);
+    }
+  }
 
   async function matchTransaction() {
     if (!programmeId) {
@@ -141,13 +194,35 @@ export function OnlineGivingTransactionRow({
               className="block h-11 w-full rounded-brand border border-surface-border bg-background px-3 text-sm"
             >
               <option value="">Choose service</option>
-              {programmes.map((programme) => (
+              {availableProgrammes.map((programme) => (
                 <option key={programme.id} value={programme.id}>
                   {formatChurchDate(programme.programme_date, localeCode)} ·{" "}
                   {programme.programme_name}
                 </option>
               ))}
             </select>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Input
+                aria-label="Search older services by name"
+                value={serviceSearch}
+                onChange={(event) => setServiceSearch(event.target.value)}
+                placeholder="Search older services by name"
+                maxLength={80}
+                className="min-w-56 flex-1"
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={searchServices}
+                disabled={pending || serviceSearching}
+              >
+                {serviceSearching ? "Searching…" : "Search older services"}
+              </Button>
+            </div>
+            {serviceSearchMessage && (
+              <p className="mt-1 text-xs text-muted">{serviceSearchMessage}</p>
+            )}
           </div>
 
           <div>
