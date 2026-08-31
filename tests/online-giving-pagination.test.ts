@@ -18,6 +18,7 @@ describe("online giving transaction pagination", () => {
       "transactionQuery.range(from, from + pageSize - 1)"
     );
     expect(dataSource).not.toContain(".limit(200)");
+    expect(dataSource).toContain('.order("id", { ascending: false })');
   });
 
   it("returns page metadata for the selected status view", () => {
