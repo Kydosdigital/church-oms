@@ -67,6 +67,13 @@ export default async function OnlineGivingReconciliationPage(
     ? (rawStatus as ReconciliationStatus)
     : "unmatched";
 
+  const rawPage = Array.isArray(searchParams.page)
+    ? searchParams.page[0]
+    : searchParams.page;
+  const parsedPage = Number(rawPage);
+  const page =
+    Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
   const supabase = await createClient();
   const [{ data: church }, data] = await Promise.all([
     supabase
@@ -74,8 +81,14 @@ export default async function OnlineGivingReconciliationPage(
       .select("currency_code, locale_code, timezone")
       .eq("id", ctx.user.church_id)
       .single(),
-    getOnlineGivingReconciliationData(selectedBranch.id, status),
+    getOnlineGivingReconciliationData(selectedBranch.id, status, page),
   ]);
+
+  if (page > data.pagination.totalPages) {
+    redirect(
+      `/revenue/reconciliation?branch=${selectedBranch.id}&status=${status}&page=${data.pagination.totalPages}`
+    );
+  }
 
   const currencyCode = church?.currency_code ?? "GBP";
   const localeCode = church?.locale_code ?? "en-GB";
@@ -242,8 +255,8 @@ export default async function OnlineGivingReconciliationPage(
         <CardHeader>
           <CardTitle>Transactions</CardTitle>
           <CardDescription>
-            Work through unmatched items first. Only the latest 200 transactions in the
-            selected view are shown at once; service totals above use all matched data.
+            Work through unmatched items first. Transactions are shown 100 at a time so
+            older items remain reachable; service totals above use all matched data.
           </CardDescription>
         </CardHeader>
 
@@ -277,18 +290,59 @@ export default async function OnlineGivingReconciliationPage(
             No {status === "all" ? "" : status + " "}transactions in this branch.
           </p>
         ) : (
-          <div className="-mx-4 border-t border-surface-border sm:-mx-0 sm:rounded-brand sm:border">
-            {data.transactions.map((transaction) => (
-              <OnlineGivingTransactionRow
-                key={transaction.id}
-                transaction={transaction}
-                programmes={data.programmes}
-                categories={data.categories}
-                currencyCode={currencyCode}
-                localeCode={localeCode}
-              />
-            ))}
-          </div>
+          <>
+            <div className="-mx-4 border-t border-surface-border sm:-mx-0 sm:rounded-brand sm:border">
+              {data.transactions.map((transaction) => (
+                <OnlineGivingTransactionRow
+                  key={transaction.id}
+                  transaction={transaction}
+                  programmes={data.programmes}
+                  categories={data.categories}
+                  currencyCode={currencyCode}
+                  localeCode={localeCode}
+                />
+              ))}
+            </div>
+
+            {data.pagination.totalPages > 1 && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted">
+                  Page {data.pagination.page.toLocaleString(localeCode)} of{" "}
+                  {data.pagination.totalPages.toLocaleString(localeCode)} · showing{" "}
+                  {(
+                    (data.pagination.page - 1) * data.pagination.pageSize +
+                    1
+                  ).toLocaleString(localeCode)}
+                  –
+                  {Math.min(
+                    data.pagination.page * data.pagination.pageSize,
+                    data.pagination.total
+                  ).toLocaleString(localeCode)}{" "}
+                  of {data.pagination.total.toLocaleString(localeCode)}
+                </p>
+                <div className="flex gap-2">
+                  {data.pagination.page > 1 && (
+                    <Link
+                      href={`/revenue/reconciliation?branch=${selectedBranch.id}&status=${status}&page=${data.pagination.page - 1}`}
+                    >
+                      <Button variant="outline" size="sm">
+                        Previous
+                      </Button>
+                    </Link>
+                  )}
+                  {data.pagination.page < data.pagination.totalPages && (
+                    <Link
+                      href={`/revenue/reconciliation?branch=${selectedBranch.id}&status=${status}&page=${data.pagination.page + 1}`}
+                    >
+                      <Button variant="outline" size="sm">
+                        Next
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </Card>
 
