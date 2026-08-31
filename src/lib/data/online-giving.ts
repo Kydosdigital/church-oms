@@ -50,6 +50,12 @@ export interface OnlineGivingReconciliationData {
     matched: number;
     ignored: number;
   };
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export type ReconciliationStatus = "all" | "unmatched" | "matched" | "ignored";
@@ -122,24 +128,33 @@ async function buildProgrammeSummary(
 
 export async function getOnlineGivingReconciliationData(
   branchId: string,
-  status: ReconciliationStatus = "unmatched"
+  status: ReconciliationStatus = "unmatched",
+  page = 1
 ): Promise<OnlineGivingReconciliationData> {
   const { supabase } = await getAuthorizedBranch(branchId);
+  const pageSize = 100;
+  const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+  const from = (safePage - 1) * pageSize;
 
   let transactionQuery = supabase
     .from("online_giving_transactions")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("branch_id", branchId)
     .order("transaction_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(200);
+    .order("created_at", { ascending: false });
 
   if (status !== "all") {
     transactionQuery = transactionQuery.eq("status", status);
   }
 
+  transactionQuery = transactionQuery.range(from, from + pageSize - 1);
+
   const [
-    { data: transactions, error: transactionError },
+    {
+      data: transactions,
+      error: transactionError,
+      count: transactionCount,
+    },
     { data: batches, error: batchError },
     { data: programmes, error: programmeError },
     { data: categories, error: categoryError },
@@ -201,6 +216,15 @@ export async function getOnlineGivingReconciliationData(
       unmatched: unmatchedCount ?? 0,
       matched: matchedCount ?? 0,
       ignored: ignoredCount ?? 0,
+    },
+    pagination: {
+      page: safePage,
+      pageSize,
+      total: transactionCount ?? 0,
+      totalPages: Math.max(
+        1,
+        Math.ceil((transactionCount ?? 0) / pageSize)
+      ),
     },
   };
 }
