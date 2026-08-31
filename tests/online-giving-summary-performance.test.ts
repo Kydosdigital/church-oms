@@ -23,7 +23,9 @@ describe("online giving reconciliation summary performance", () => {
     expect(migration).toContain("group by r.programme_id");
   });
 
-  it("keeps the summary RPC branch and finance-history scoped", () => {
+  it("keeps the summary RPC under caller RLS and finance-history scope", () => {
+    expect(migration).toContain("security invoker");
+    expect(migration).not.toContain("security definer");
     expect(migration).toContain(
       "private.has_finance_history_permission(p_branch_id)"
     );
