@@ -206,10 +206,63 @@ export async function getOnlineGivingReconciliationData(
   if (programmeError) throw programmeError;
   if (categoryError) throw categoryError;
 
+  const programmeMap = new Map(
+    (programmes ?? []).map((programme) => [programme.id, programme])
+  );
+  const pageTransactions = transactions ?? [];
+  const transactionDates = Array.from(
+    new Set(pageTransactions.map((transaction) => transaction.transaction_date))
+  );
+
+  if (transactionDates.length > 0) {
+    const { data: datedProgrammes, error: datedProgrammeError } = await supabase
+      .from("programme_occurrences")
+      .select("id, programme_name, programme_date, finance_state")
+      .eq("branch_id", branchId)
+      .in("programme_date", transactionDates)
+      .order("programme_date", { ascending: false });
+
+    if (datedProgrammeError) throw datedProgrammeError;
+    for (const programme of datedProgrammes ?? []) {
+      programmeMap.set(programme.id, programme);
+    }
+  }
+
+  const missingMatchedProgrammeIds = Array.from(
+    new Set(
+      pageTransactions
+        .map((transaction) => transaction.matched_programme_id)
+        .filter(
+          (id): id is string =>
+            Boolean(id) && !programmeMap.has(id as string)
+        )
+    )
+  );
+
+  if (missingMatchedProgrammeIds.length > 0) {
+    const { data: matchedProgrammes, error: matchedProgrammeError } =
+      await supabase
+        .from("programme_occurrences")
+        .select("id, programme_name, programme_date, finance_state")
+        .eq("branch_id", branchId)
+        .in("id", missingMatchedProgrammeIds);
+
+    if (matchedProgrammeError) throw matchedProgrammeError;
+    for (const programme of matchedProgrammes ?? []) {
+      programmeMap.set(programme.id, programme);
+    }
+  }
+
+  const programmeOptions = Array.from(programmeMap.values()).sort(
+    (a, b) =>
+      b.programme_date.localeCompare(a.programme_date) ||
+      a.programme_name.localeCompare(b.programme_name)
+  );
+
   return {
-    transactions: transactions ?? [],
+    transactions: pageTransactions,
     batches: batches ?? [],
-    programmes: programmes ?? [],
+    programmes: programmeOptions,
     categories: categories ?? [],
     summary,
     counts: {
@@ -228,6 +281,34 @@ export async function getOnlineGivingReconciliationData(
       ),
     },
   };
+}
+
+export async function searchReconciliationProgrammesAction(
+  branchId: string,
+  rawQuery: string
+): Promise<ReconciliationProgrammeOption[]> {
+  const { supabase } = await getAuthorizedBranch(branchId);
+  const query = rawQuery.trim().slice(0, 80);
+
+  if (query.length < 2) return [];
+
+  let request = supabase
+    .from("programme_occurrences")
+    .select("id, programme_name, programme_date, finance_state")
+    .eq("branch_id", branchId)
+    .order("programme_date", { ascending: false })
+    .limit(25);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(query)) {
+    request = request.eq("programme_date", query);
+  } else {
+    request = request.ilike("programme_name", `%${query}%`);
+  }
+
+  const { data, error } = await request;
+  if (error) throw error;
+
+  return data ?? [];
 }
 
 export interface OnlineGivingImportInput {
