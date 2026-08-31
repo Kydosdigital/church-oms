@@ -39,6 +39,9 @@ describe("online giving reconciliation summary performance", () => {
     );
     expect(dataSource).not.toContain("fetchAllMatchedTotals");
     expect(dataSource).not.toContain("fetchAllRecordedOnlineTotals");
-    expect(dataSource).not.toContain(".range(from, from + pageSize - 1)");
+    expect(dataSource).not.toContain('.select("matched_programme_id, amount")');
+    expect(dataSource).not.toContain(
+      '"programme_id, online_amount, programme_occurrences!inner(branch_id)"'
+    );
   });
 });
