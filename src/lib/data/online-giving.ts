@@ -141,7 +141,8 @@ export async function getOnlineGivingReconciliationData(
     .select("*", { count: "exact" })
     .eq("branch_id", branchId)
     .order("transaction_date", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false });
 
   if (status !== "all") {
     transactionQuery = transactionQuery.eq("status", status);
