@@ -97,113 +97,27 @@ export async function listReconciliationBranches(): Promise<ReconciliationBranch
   );
 }
 
-async function fetchAllMatchedTotals(branchId: string) {
+async function buildProgrammeSummary(
+  branchId: string
+): Promise<ProgrammeReconciliationSummary[]> {
   const supabase = await createClient();
-  const totals = new Map<string, { amount: number; count: number }>();
-  const pageSize = 1000;
-
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
-      .from("online_giving_transactions")
-      .select("matched_programme_id, amount")
-      .eq("branch_id", branchId)
-      .eq("status", "matched")
-      .not("matched_programme_id", "is", null)
-      .range(from, from + pageSize - 1);
-
-    if (error) throw error;
-
-    for (const row of data ?? []) {
-      if (!row.matched_programme_id) continue;
-      const current = totals.get(row.matched_programme_id) ?? {
-        amount: 0,
-        count: 0,
-      };
-      current.amount += Number(row.amount);
-      current.count += 1;
-      totals.set(row.matched_programme_id, current);
-    }
-
-    if ((data ?? []).length < pageSize) break;
-  }
-
-  return totals;
-}
-
-async function fetchAllRecordedOnlineTotals(branchId: string) {
-  const supabase = await createClient();
-  const totals = new Map<string, number>();
-  const pageSize = 1000;
-
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
-      .from("revenue_entries")
-      .select(
-        "programme_id, online_amount, programme_occurrences!inner(branch_id)"
-      )
-      .eq("programme_occurrences.branch_id", branchId)
-      .range(from, from + pageSize - 1);
-
-    if (error) throw error;
-
-    for (const row of data ?? []) {
-      totals.set(
-        row.programme_id,
-        (totals.get(row.programme_id) ?? 0) + Number(row.online_amount)
-      );
-    }
-
-    if ((data ?? []).length < pageSize) break;
-  }
-
-  return totals;
-}
-
-async function buildProgrammeSummary(branchId: string) {
-  const [matchedTotals, recordedTotals] = await Promise.all([
-    fetchAllMatchedTotals(branchId),
-    fetchAllRecordedOnlineTotals(branchId),
-  ]);
-
-  const ids = Array.from(
-    new Set([...matchedTotals.keys(), ...recordedTotals.keys()])
+  const { data, error } = await supabase.rpc(
+    "online_giving_programme_summary",
+    { p_branch_id: branchId }
   );
 
-  if (ids.length === 0) return [];
+  if (error) throw error;
 
-  const supabase = await createClient();
-  const programmes: ReconciliationProgrammeOption[] = [];
-
-  for (let index = 0; index < ids.length; index += 200) {
-    const chunk = ids.slice(index, index + 200);
-    const { data, error } = await supabase
-      .from("programme_occurrences")
-      .select("id, programme_name, programme_date, finance_state")
-      .eq("branch_id", branchId)
-      .in("id", chunk);
-
-    if (error) throw error;
-    programmes.push(...(data ?? []));
-  }
-
-  return programmes
-    .map((programme) => {
-      const recorded = recordedTotals.get(programme.id) ?? 0;
-      const matched = matchedTotals.get(programme.id) ?? { amount: 0, count: 0 };
-      const variance = Math.round((matched.amount - recorded) * 100) / 100;
-
-      return {
-        programme_id: programme.id,
-        programme_name: programme.programme_name,
-        programme_date: programme.programme_date,
-        finance_state: programme.finance_state,
-        recorded_online: Math.round(recorded * 100) / 100,
-        matched_imported: Math.round(matched.amount * 100) / 100,
-        variance,
-        matched_transaction_count: matched.count,
-      };
-    })
-    .sort((a, b) => b.programme_date.localeCompare(a.programme_date));
+  return (data ?? []).map((row) => ({
+    programme_id: row.programme_id,
+    programme_name: row.programme_name,
+    programme_date: row.programme_date,
+    finance_state: row.finance_state,
+    recorded_online: Number(row.recorded_online ?? 0),
+    matched_imported: Number(row.matched_imported ?? 0),
+    variance: Number(row.variance ?? 0),
+    matched_transaction_count: Number(row.matched_transaction_count ?? 0),
+  }));
 }
 
 export async function getOnlineGivingReconciliationData(
