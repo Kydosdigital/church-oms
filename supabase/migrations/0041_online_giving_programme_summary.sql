@@ -4,7 +4,7 @@
 -- The reconciliation page previously paged every matched transaction and every
 -- revenue row into the Next.js server and aggregated them in memory. That made
 -- page-load work grow linearly with church history. This RPC keeps the same
--- branch-scoped finance-history authorization while returning only one row per
+-- branch-scoped finance-history authorization and RLS while returning only one row per
 -- programme that has recorded or matched online giving.
 
 create or replace function public.online_giving_programme_summary(
@@ -21,7 +21,7 @@ returns table (
   matched_transaction_count bigint
 )
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 declare
