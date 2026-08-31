@@ -203,6 +203,7 @@ export function OnlineGivingTransactionRow({
             </select>
             <div className="mt-2 flex flex-wrap gap-2">
               <Input
+                aria-label="Search older services by name"
                 value={serviceSearch}
                 onChange={(event) => setServiceSearch(event.target.value)}
                 placeholder="Search older services by name"
