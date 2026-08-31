@@ -199,7 +199,7 @@ export function OnlineGivingTransactionRow({
                   {formatChurchDate(programme.programme_date, localeCode)} ·{" "}
                   {programme.programme_name}
                 </option>
-              ))}
+                ))}
             </select>
             <div className="mt-2 flex flex-wrap gap-2">
               <Input
@@ -236,7 +236,9 @@ export function OnlineGivingTransactionRow({
               className="block h-11 w-full rounded-brand border border-surface-border bg-background px-3 text-sm"
             >
               <option value="">Whole service / not classified</option>
-              {categories.map((category) => (
+              {categories
+                .filter((category) => category.active)
+                .map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
                 </option>
