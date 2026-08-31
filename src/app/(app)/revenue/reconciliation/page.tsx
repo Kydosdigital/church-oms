@@ -174,8 +174,9 @@ export default async function OnlineGivingReconciliationPage(
         <CardHeader>
           <CardTitle>Import online giving</CardTitle>
           <CardDescription>
-            The file is fingerprinted before import, so importing the exact same statement
-            twice is blocked. Donor names are not stored by this reconciliation feature.
+            The normalized statement contents are fingerprinted on the server, so
+            re-importing the same transactions is blocked. Donor names are not imported
+            as a dedicated field; statement references are retained for reconciliation.
           </CardDescription>
         </CardHeader>
         <OnlineGivingImport
