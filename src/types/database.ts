@@ -1261,6 +1261,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      online_giving_programme_summary: {
+        Args: { p_branch_id: string }
+        Returns: {
+          finance_state: string
+          matched_imported: number
+          matched_transaction_count: number
+          programme_date: string
+          programme_id: string
+          programme_name: string
+          recorded_online: number
+          variance: number
+        }[]
+      }
       open_attendance_counter: {
         Args: { p_programme_id: string }
         Returns: {
