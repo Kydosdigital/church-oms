@@ -1215,7 +1215,6 @@ export type Database = {
       import_online_giving_batch: {
         Args: {
           p_branch_id: string
-          p_file_hash: string
           p_file_name: string
           p_source_name: string
           p_transactions: Json
