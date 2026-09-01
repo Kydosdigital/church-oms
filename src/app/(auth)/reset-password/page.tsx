@@ -4,6 +4,10 @@ import { useActionState, useState } from "react";
 import { updatePassword, type ResetPasswordState } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
+import {
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_REQUIREMENTS,
+} from "@/lib/auth/password-policy";
 
 const initialState: ResetPasswordState = {};
 
@@ -28,7 +32,8 @@ export default function ResetPasswordPage() {
             name="password"
             type={showPasswords ? "text" : "password"}
             autoComplete="new-password"
-            minLength={8}
+            minLength={MIN_PASSWORD_LENGTH}
+            aria-describedby="password-requirements"
             className="pr-16"
             required
           />
@@ -42,6 +47,9 @@ export default function ResetPasswordPage() {
             {showPasswords ? "Hide" : "Show"}
           </button>
         </div>
+        <p id="password-requirements" className="mt-1 text-xs text-muted">
+          {PASSWORD_REQUIREMENTS}
+        </p>
       </div>
 
       <div>
@@ -51,7 +59,7 @@ export default function ResetPasswordPage() {
           name="confirm_password"
           type={showPasswords ? "text" : "password"}
           autoComplete="new-password"
-          minLength={8}
+          minLength={MIN_PASSWORD_LENGTH}
           required
         />
       </div>
