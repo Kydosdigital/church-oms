@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { getPasswordPolicyError } from "@/lib/auth/password-policy";
 
 export interface AuthActionState {
   error?: string;
@@ -31,6 +32,11 @@ export async function signUp(_prevState: AuthActionState, formData: FormData): P
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("full_name") ?? "");
+
+  const passwordError = getPasswordPolicyError(password);
+  if (passwordError) {
+    return { error: passwordError };
+  }
 
   const origin = (await headers()).get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const emailRedirectTo = origin
@@ -105,8 +111,9 @@ export async function updatePassword(
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirm_password") ?? "");
 
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters" };
+  const passwordError = getPasswordPolicyError(password);
+  if (passwordError) {
+    return { error: passwordError };
   }
   if (password !== confirmPassword) {
     return { error: "Passwords don't match" };
