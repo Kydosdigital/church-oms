@@ -5,6 +5,10 @@ import Link from "next/link";
 import { signUp, type AuthActionState } from "../actions";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
+import {
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_REQUIREMENTS,
+} from "@/lib/auth/password-policy";
 
 const initialState: AuthActionState = {};
 
@@ -40,7 +44,8 @@ export default function SignupPage() {
             name="password"
             type={showPassword ? "text" : "password"}
             autoComplete="new-password"
-            minLength={8}
+            minLength={MIN_PASSWORD_LENGTH}
+            aria-describedby="password-requirements"
             className="pr-16"
             required
           />
@@ -54,6 +59,9 @@ export default function SignupPage() {
             {showPassword ? "Hide" : "Show"}
           </button>
         </div>
+        <p id="password-requirements" className="mt-1 text-xs text-muted">
+          {PASSWORD_REQUIREMENTS}
+        </p>
       </div>
 
       <FieldError>{state.error}</FieldError>
