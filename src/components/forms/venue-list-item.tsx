@@ -43,7 +43,12 @@ export function VenueListItem({ venue }: { venue: Venue }) {
   if (editing) {
     return (
       <li className="flex flex-wrap items-center gap-2 py-1">
-        <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 w-40" />
+        <Input
+          aria-label="Venue name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="h-9 w-40"
+        />
         <Input
           aria-label="Default capacity"
           type="number"
