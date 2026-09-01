@@ -4,7 +4,10 @@ import { getProgramme } from "@/lib/data/programmes";
 import { createClient } from "@/lib/supabase/server";
 import { formatChurchDate, formatChurchDateTime } from "@/lib/locales";
 import { buttonClassName } from "@/components/ui/button";
-import type { Signoff } from "@/types/domain";
+import {
+  selectCurrentAttendanceSignoffs,
+  type ProgrammeReportSignoff,
+} from "@/lib/reports/programme-signoffs";
 
 export default async function ProgrammeReportPage(props: PageProps<"/reports/programme/[id]">) {
   const { id } = await props.params;
@@ -18,17 +21,19 @@ export default async function ProgrammeReportPage(props: PageProps<"/reports/pro
       .from("signoffs")
       .select("*, app_users(full_name)")
       .eq("programme_id", id)
-      .order("created_at"),
+      .order("record_version", { ascending: false })
+      .order("created_at", { ascending: false }),
     supabase
       .from("churches")
       .select("timezone, locale_code")
       .eq("id", programme.church_id)
       .single(),
   ]);
-  const signoffs = (signoffsData ?? []) as (Signoff & { app_users: { full_name: string } | null })[];
-
-  const submit = signoffs.find((s) => s.action === "submit" && s.record_kind === "attendance");
-  const verify = signoffs.find((s) => s.action === "verify" && s.record_kind === "attendance");
+  const signoffs = (signoffsData ?? []) as ProgrammeReportSignoff[];
+  const { submit, verify } = selectCurrentAttendanceSignoffs(
+    signoffs,
+    programme.state
+  );
 
   const localeCode = church?.locale_code ?? "en-GB";
   const timeZone = church?.timezone ?? "UTC";
