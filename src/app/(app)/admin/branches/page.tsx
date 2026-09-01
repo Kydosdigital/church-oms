@@ -16,6 +16,10 @@ export default async function BranchesAdminPage() {
           Branch identifiers exist from day one, even for a single-branch church (section 10.2).
           Branch selection is hidden from ordinary workflows when only one branch exists.
         </p>
+        <p className="text-sm text-muted mt-2">
+          Keep venues because they identify where a programme happened and provide the default capacity used for attendance warnings.
+          Each programme stores a capacity snapshot when it is created, so changing a venue&apos;s default capacity affects future programmes only and does not rewrite historical records.
+        </p>
       </div>
 
       <BranchForm />
