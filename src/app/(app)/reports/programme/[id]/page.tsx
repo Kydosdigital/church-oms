@@ -1,8 +1,13 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProgramme } from "@/lib/data/programmes";
 import { createClient } from "@/lib/supabase/server";
 import { formatChurchDate, formatChurchDateTime } from "@/lib/locales";
-import type { Signoff } from "@/types/domain";
+import { buttonClassName } from "@/components/ui/button";
+import {
+  selectCurrentAttendanceSignoffs,
+  type ProgrammeReportSignoff,
+} from "@/lib/reports/programme-signoffs";
 
 export default async function ProgrammeReportPage(props: PageProps<"/reports/programme/[id]">) {
   const { id } = await props.params;
@@ -16,17 +21,19 @@ export default async function ProgrammeReportPage(props: PageProps<"/reports/pro
       .from("signoffs")
       .select("*, app_users(full_name)")
       .eq("programme_id", id)
-      .order("created_at"),
+      .order("record_version", { ascending: false })
+      .order("created_at", { ascending: false }),
     supabase
       .from("churches")
       .select("timezone, locale_code")
       .eq("id", programme.church_id)
       .single(),
   ]);
-  const signoffs = (signoffsData ?? []) as (Signoff & { app_users: { full_name: string } | null })[];
-
-  const submit = signoffs.find((s) => s.action === "submit" && s.record_kind === "attendance");
-  const verify = signoffs.find((s) => s.action === "verify" && s.record_kind === "attendance");
+  const signoffs = (signoffsData ?? []) as ProgrammeReportSignoff[];
+  const { submit, verify } = selectCurrentAttendanceSignoffs(
+    signoffs,
+    programme.state
+  );
 
   const localeCode = church?.locale_code ?? "en-GB";
   const timeZone = church?.timezone ?? "UTC";
@@ -38,12 +45,18 @@ export default async function ProgrammeReportPage(props: PageProps<"/reports/pro
 
   return (
     <div className="p-8 max-w-2xl mx-auto print:p-0 bg-background text-foreground">
-      <div className="flex justify-end mb-4 print:hidden">
+      <div className="flex flex-wrap justify-end gap-2 mb-4 print:hidden">
+        <Link
+          href={`/reports/programme/${id}/pdf`}
+          className={buttonClassName({ size: "sm" })}
+        >
+          Download PDF
+        </Link>
         <button
-          className="rounded-brand bg-brand text-brand-foreground px-4 py-2 text-sm"
+          className={buttonClassName({ variant: "outline", size: "sm" })}
           data-print-trigger
         >
-          Print / Save as PDF
+          Print
         </button>
       </div>
 
