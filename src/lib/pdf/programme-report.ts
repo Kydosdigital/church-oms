@@ -1,5 +1,3 @@
-import "server-only";
-
 export interface ProgrammeReportPdfData {
   title: string;
   date: string;
