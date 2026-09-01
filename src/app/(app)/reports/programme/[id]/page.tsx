@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProgramme } from "@/lib/data/programmes";
 import { createClient } from "@/lib/supabase/server";
 import { formatChurchDate, formatChurchDateTime } from "@/lib/locales";
+import { buttonClassName } from "@/components/ui/button";
 import type { Signoff } from "@/types/domain";
 
 export default async function ProgrammeReportPage(props: PageProps<"/reports/programme/[id]">) {
@@ -38,12 +40,18 @@ export default async function ProgrammeReportPage(props: PageProps<"/reports/pro
 
   return (
     <div className="p-8 max-w-2xl mx-auto print:p-0 bg-background text-foreground">
-      <div className="flex justify-end mb-4 print:hidden">
+      <div className="flex flex-wrap justify-end gap-2 mb-4 print:hidden">
+        <Link
+          href={`/reports/programme/${id}/pdf`}
+          className={buttonClassName({ size: "sm" })}
+        >
+          Download PDF
+        </Link>
         <button
-          className="rounded-brand bg-brand text-brand-foreground px-4 py-2 text-sm"
+          className={buttonClassName({ variant: "outline", size: "sm" })}
           data-print-trigger
         >
-          Print / Save as PDF
+          Print
         </button>
       </div>
 
