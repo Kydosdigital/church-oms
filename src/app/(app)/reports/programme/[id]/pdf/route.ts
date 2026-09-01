@@ -121,7 +121,9 @@ export async function GET(
 
   const filename = `${filenamePart(programme.programme_name)}-${programme.programme_date}.pdf`;
 
-  const body = new Uint8Array(pdf);\n\n  return new Response(body, {
+  const body = new Uint8Array(pdf);
+
+  return new Response(body, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}"`,
