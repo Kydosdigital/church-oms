@@ -16,8 +16,14 @@ export function selectCurrentAttendanceSignoffs(
         right.created_at.localeCompare(left.created_at)
     );
 
+  const latestReopen = attendanceSignoffs.find(
+    (signoff) => signoff.action === "reopen"
+  );
+
   const submit = attendanceSignoffs.find(
-    (signoff) => signoff.action === "submit"
+    (signoff) =>
+      signoff.action === "submit" &&
+      (!latestReopen || signoff.record_version > latestReopen.record_version)
   );
 
   const verify =
