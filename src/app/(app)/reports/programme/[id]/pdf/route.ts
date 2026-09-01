@@ -4,13 +4,15 @@ import { type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { getProgramme } from "@/lib/data/programmes";
-import { canAccessReports } from "@/lib/route-access";
 import {
   formatChurchDate,
   formatChurchDateTime,
 } from "@/lib/locales";
 import { createProgrammeReportPdf } from "@/lib/pdf/programme-report";
-import type { Signoff } from "@/types/domain";
+import {
+  selectCurrentAttendanceSignoffs,
+  type ProgrammeReportSignoff,
+} from "@/lib/reports/programme-signoffs";
 
 export const runtime = "nodejs";
 
@@ -34,8 +36,8 @@ export async function GET(
   if (!ctx) {
     return new Response("Unauthorized", { status: 401 });
   }
-  if (!ctx.user.active || !canAccessReports(ctx)) {
-    return new Response("Reports permission required", { status: 403 });
+  if (!ctx.user.active || !ctx.user.church_id) {
+    return new Response("Active church account required", { status: 403 });
   }
 
   const { id } = await context.params;
@@ -53,7 +55,8 @@ export async function GET(
       .from("signoffs")
       .select("*, app_users(full_name)")
       .eq("programme_id", id)
-      .order("created_at"),
+      .order("record_version", { ascending: false })
+      .order("created_at", { ascending: false }),
     supabase
       .from("churches")
       .select("timezone, locale_code")
@@ -61,17 +64,10 @@ export async function GET(
       .single(),
   ]);
 
-  const signoffs = (signoffsData ?? []) as (Signoff & {
-    app_users: { full_name: string } | null;
-  })[];
-
-  const submit = signoffs.find(
-    (signoff) =>
-      signoff.action === "submit" && signoff.record_kind === "attendance"
-  );
-  const verify = signoffs.find(
-    (signoff) =>
-      signoff.action === "verify" && signoff.record_kind === "attendance"
+  const signoffs = (signoffsData ?? []) as ProgrammeReportSignoff[];
+  const { submit, verify } = selectCurrentAttendanceSignoffs(
+    signoffs,
+    programme.state
   );
 
   const localeCode = church?.locale_code ?? "en-GB";
