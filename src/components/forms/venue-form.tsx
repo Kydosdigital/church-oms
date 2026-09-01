@@ -45,8 +45,8 @@ export function VenueForm({ branchId }: { branchId: string }) {
         <Input id={`venue-name-${branchId}`} placeholder="e.g. Main Hall" {...register("name")} />
         <FieldError>{errors.name?.message}</FieldError>
       </div>
-      <div className="w-28">
-        <Label htmlFor={`venue-capacity-${branchId}`}>Capacity</Label>
+      <div className="w-32">
+        <Label htmlFor={`venue-capacity-${branchId}`}>Default capacity</Label>
         <Input id={`venue-capacity-${branchId}`} type="number" min={1} {...register("default_capacity")} />
         <FieldError>{errors.default_capacity?.message}</FieldError>
       </div>

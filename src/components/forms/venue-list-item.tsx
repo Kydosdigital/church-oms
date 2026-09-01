@@ -45,11 +45,12 @@ export function VenueListItem({ venue }: { venue: Venue }) {
       <li className="flex flex-wrap items-center gap-2 py-1">
         <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 w-40" />
         <Input
+          aria-label="Default capacity"
           type="number"
           min={1}
           value={capacity}
           onChange={(e) => setCapacity(e.target.value)}
-          className="h-9 w-24"
+          className="h-9 w-28"
         />
         <Button size="sm" onClick={save} disabled={pending}>
           Save
@@ -57,6 +58,7 @@ export function VenueListItem({ venue }: { venue: Venue }) {
         <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={pending}>
           Cancel
         </Button>
+        <p className="text-xs text-muted w-full">Capacity changes apply to future programmes; existing programme snapshots stay unchanged.</p>
         {error && <p className="text-sm text-danger w-full">{error}</p>}
       </li>
     );
@@ -69,7 +71,7 @@ export function VenueListItem({ venue }: { venue: Venue }) {
         {!venue.active && <Badge className="bg-surface-border/60 text-muted">Inactive</Badge>}
       </span>
       <span className="flex items-center gap-3">
-        <span className="text-muted">Capacity {venue.default_capacity}</span>
+        <span className="text-muted">Default capacity {venue.default_capacity}</span>
         <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
           Edit
         </Button>
