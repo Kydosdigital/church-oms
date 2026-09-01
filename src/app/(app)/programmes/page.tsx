@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listProgrammes } from "@/lib/data/programmes";
 import { StateBadge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { formatChurchDate } from "@/lib/locales";
@@ -47,8 +47,8 @@ export default async function ProgrammesPage(props: PageProps<"/programmes">) {
             {reviewTitle ?? "Service records for your assigned branches."}
           </p>
         </div>
-        <Link href="/programmes/new">
-          <Button>New programme</Button>
+        <Link href="/programmes/new" className={buttonClassName()}>
+          New programme
         </Link>
       </div>
 
