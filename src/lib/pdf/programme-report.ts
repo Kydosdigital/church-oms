@@ -34,6 +34,7 @@ type FontName = "F1" | "F2";
 
 function toPdfSafeText(value: string): string {
   return value
+    .replace(/[\r\n\t]+/g, " ")
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u201c\u201d]/g, '"')
     .replace(/[\u2013\u2014]/g, "-")
@@ -130,9 +131,15 @@ class ProgrammePdfLayout {
   }
 
   addTitle(title: string, date: string) {
-    this.ensureSpace(58);
-    this.page.push(textCommand(title, MARGIN_X, this.y, 18, "F2"));
-    this.y -= 22;
+    const titleLines = wrapText(title, 18);
+
+    for (const line of titleLines) {
+      this.ensureSpace(24);
+      this.page.push(textCommand(line, MARGIN_X, this.y, 18, "F2"));
+      this.y -= 22;
+    }
+
+    this.ensureSpace(28);
     this.page.push(textCommand(date, MARGIN_X, this.y, 10, "F1", 0.38));
     this.y -= 26;
   }
