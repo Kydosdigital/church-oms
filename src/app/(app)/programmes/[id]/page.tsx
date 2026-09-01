@@ -5,7 +5,7 @@ import { getCurrentUserContext } from "@/lib/data/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { StateBadge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 import { VerificationActions } from "@/components/forms/verification-actions";
 import { ProgrammeCorrectionForm } from "@/components/forms/programme-correction-form";
 import { capacityUtilization, formatPercent } from "@/lib/calculations";
@@ -132,8 +132,11 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
                   : "Review the final live-counter evidence captured for this attendance record."}
               </p>
             </div>
-            <Link href={`/programmes/${programme.id}/counter`}>
-              <Button>{counterEditable ? "Open live counter" : "View live counter"}</Button>
+            <Link
+              href={`/programmes/${programme.id}/counter`}
+              className={buttonClassName()}
+            >
+              {counterEditable ? "Open live counter" : "View live counter"}
             </Link>
           </div>
         </Card>
@@ -217,13 +220,19 @@ export default async function ProgrammeDetailPage(props: PageProps<"/programmes/
       </Card>
 
       {canEnterFinance && (
-        <Link href={`/revenue/${programme.id}`}>
-          <Button variant="outline">Enter revenue for this programme</Button>
+        <Link
+          href={`/revenue/${programme.id}`}
+          className={buttonClassName({ variant: "outline" })}
+        >
+          Enter revenue for this programme
         </Link>
       )}
 
-      <Link href={`/reports/programme/${programme.id}`}>
-        <Button variant="ghost">View printable programme report</Button>
+      <Link
+        href={`/reports/programme/${programme.id}`}
+        className={buttonClassName({ variant: "ghost" })}
+      >
+        View printable programme report
       </Link>
     </div>
   );

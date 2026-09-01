@@ -143,16 +143,20 @@ export function SiteHeader({ overHero = false }: { overHero?: boolean }) {
           className="md:hidden border-t border-white/10 bg-ink px-5 pb-8 pt-4"
         >
           <nav aria-label="Mobile" className="flex flex-col">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setOpen(false)}
-                className="py-3.5 text-lg text-ink-text border-b border-white/5"
-              >
-                {item.label}
-              </Link>
-            ))}
+            {NAV.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setOpen(false)}
+                  className="py-3.5 text-lg text-ink-text border-b border-white/5"
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
           <div className="mt-6 flex flex-col gap-3">
             <Link

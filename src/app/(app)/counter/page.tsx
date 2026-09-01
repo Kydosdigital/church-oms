@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { listProgrammes } from "@/lib/data/programmes";
 import { getCurrentUserContext } from "@/lib/data/current-user";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonClassName } from "@/components/ui/button";
 import { StateBadge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
 import { formatChurchDate } from "@/lib/locales";
@@ -49,8 +49,11 @@ export default async function LiveCounterIndexPage() {
           </p>
         </div>
         {(ctx.permissions.hasRole("usher") || isAdministrator) && (
-          <Link href="/programmes/new">
-            <Button variant="outline">Create programme</Button>
+          <Link
+            href="/programmes/new"
+            className={buttonClassName({ variant: "outline" })}
+          >
+            Create programme
           </Link>
         )}
       </div>
@@ -74,8 +77,11 @@ export default async function LiveCounterIndexPage() {
                   })}</p>
                   <p className="mt-2 text-xs text-muted">Recorded attendance: {attendance.toLocaleString(localeCode)}</p>
                 </div>
-                <Link href={`/programmes/${programme.id}/counter`}>
-                  <Button>Open counter</Button>
+                <Link
+                  href={`/programmes/${programme.id}/counter`}
+                  className={buttonClassName()}
+                >
+                  Open counter
                 </Link>
               </div>
             </Card>

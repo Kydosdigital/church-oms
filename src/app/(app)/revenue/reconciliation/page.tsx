@@ -10,7 +10,7 @@ import {
 import { OnlineGivingImport } from "@/components/revenue/online-giving-import";
 import { OnlineGivingTransactionRow } from "@/components/revenue/online-giving-transaction-row";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClassName } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/calculations";
 import { formatChurchDate, formatChurchDateTime } from "@/lib/locales";
 
@@ -41,8 +41,8 @@ export default async function OnlineGivingReconciliationPage(
             This area requires finance-history permission for at least one branch.
           </p>
         </div>
-        <Link href="/revenue">
-          <Button variant="outline">Back to Revenue</Button>
+        <Link href="/revenue" className={buttonClassName({ variant: "outline" })}>
+          Back to Revenue
         </Link>
       </div>
     );
@@ -114,8 +114,8 @@ export default async function OnlineGivingReconciliationPage(
             and compare the imported total with the online giving recorded in Church OMS.
           </p>
         </div>
-        <Link href="/revenue">
-          <Button variant="outline">Back to Revenue</Button>
+        <Link href="/revenue" className={buttonClassName({ variant: "outline" })}>
+          Back to Revenue
         </Link>
       </div>
 
@@ -325,19 +325,17 @@ export default async function OnlineGivingReconciliationPage(
                   {data.pagination.page > 1 && (
                     <Link
                       href={`/revenue/reconciliation?branch=${selectedBranch.id}&status=${status}&page=${data.pagination.page - 1}`}
+                      className={buttonClassName({ variant: "outline", size: "sm" })}
                     >
-                      <Button variant="outline" size="sm">
-                        Previous
-                      </Button>
+                      Previous
                     </Link>
                   )}
                   {data.pagination.page < data.pagination.totalPages && (
                     <Link
                       href={`/revenue/reconciliation?branch=${selectedBranch.id}&status=${status}&page=${data.pagination.page + 1}`}
+                      className={buttonClassName({ variant: "outline", size: "sm" })}
                     >
-                      <Button variant="outline" size="sm">
-                        Next
-                      </Button>
+                      Next
                     </Link>
                   )}
                 </div>

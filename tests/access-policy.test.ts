@@ -95,6 +95,23 @@ describe("shared app access policy", () => {
     expect(canAccessReports(historicalFinance)).toBe(true);
   });
 
+  it("keeps Finance Verifier access scoped to finance permissions and history", () => {
+    const currentFinanceVerifier = context([
+      role("finance_verifier", { finance: true, history: false }),
+    ]);
+    const historicalFinanceVerifier = context([
+      role("finance_verifier", { finance: true, history: true }),
+    ]);
+
+    expect(canAccessRevenue(currentFinanceVerifier)).toBe(true);
+    expect(canAccessReports(currentFinanceVerifier)).toBe(false);
+    expect(canAccessProgrammes(currentFinanceVerifier)).toBe(false);
+    expect(canAccessLiveCounter(currentFinanceVerifier)).toBe(false);
+
+    expect(canAccessRevenue(historicalFinanceVerifier)).toBe(true);
+    expect(canAccessReports(historicalFinanceVerifier)).toBe(true);
+  });
+
   it("does not grant ordinary Administrator finance unless explicitly configured", () => {
     const admin = context([role("administrator")]);
     const financeAdmin = context([
